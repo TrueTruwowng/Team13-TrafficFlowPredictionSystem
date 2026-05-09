@@ -1,0 +1,11 @@
+# --- OS & IDE ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs & Config ---
+logs/
+*.log
+.env
