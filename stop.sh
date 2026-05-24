@@ -24,9 +24,19 @@ echo "   -> Spark: STOPPED"
 echo "3. Dừng Kafka Cluster..."
 for node in "${NODES[@]}"
 do
-    ssh $node "$KAFKA_PATH/bin/kafka-server-stop.sh"
-    # Diệt tận gốc nếu Kafka vẫn lỳ lợm chạy ngầm
-    ssh $node "ps ax | grep kafka | grep -v grep | awk '{print \$1}' | xargs -r sudo kill -9"
+    # Gửi SIGTERM để Kafka flush và đóng log segment sạch
+    ssh $node "$KAFKA_PATH/bin/kafka-server-stop.sh" 2>/dev/null
+
+    # Chờ tối đa 30s cho graceful shutdown
+    for i in $(seq 1 30); do
+        K_PID=$(ssh $node "jps 2>/dev/null | grep -i Kafka | awk '{print \$1}'" 2>/dev/null)
+        [ -z "$K_PID" ] && break
+        sleep 1
+    done
+
+    # Force kill nếu vẫn còn chạy
+    ssh $node "jps 2>/dev/null | grep -i Kafka | awk '{print \$1}' | xargs -r sudo kill -9" 2>/dev/null
+
     echo "   -> Kafka @ $node: STOPPED"
 done
 

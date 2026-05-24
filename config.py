@@ -51,43 +51,15 @@ SPARK_CONF = {
         "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
     "spark.hadoop.fs.AbstractFileSystem.gs.impl":
         "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
-    "spark.hadoop.google.cloud.auth.service.account.enable": "true",
-}
-
-# ── Road Segments (metadata tĩnh) ─────────────────────────────────────────────
-ROAD_SEGMENTS = [
-    {"id": "SEG001", "name": "HQV - PTT", "lat": 21.04610761029762,  "long": 105.786337500623},
-    {"id": "SEG002", "name": "HQV - NPS", "lat": 21.04605840393917,  "long": 105.7902484330184},
-    {"id": "SEG003", "name": "HQV - NT",  "lat": 21.046144780811982, "long": 105.79441294799092},
-    {"id": "SEG004", "name": "HQV - NVH", "lat": 21.046111488932937, "long": 105.7973369997308},
-    {"id": "SEG005", "name": "TDN - NPS", "lat": 21.040249360573526, "long": 105.79042205748846},
-    {"id": "SEG006", "name": "NVH - NKT", "lat": 21.039019705238665, "long": 105.79764595466595},
-    {"id": "SEG007", "name": "NKT - DQH", "lat": 21.03690218878549,  "long": 105.80183528538696},
-    {"id": "SEG008", "name": "CG - TQK",  "lat": 21.035756749196693, "long": 105.7916665327835},
-    {"id": "SEG009", "name": "CG - TDN",  "lat": 21.035091818986388, "long": 105.79362570931829},
-]
-
-# Dùng cho Open-Meteo API calls (không cần API key)
-COOR_LIST = [
-    (seg["name"], f"{seg['lat']},{seg['long']}") for seg in ROAD_SEGMENTS
-]
-
-# Open-Meteo endpoint (free, no key required)
-OPENMETEO_URL = "https://api.open-meteo.com/v1/forecast"
-
-# Các weather variable cần lấy từ Open-Meteo
-OPENMETEO_PARAMS = {
-    "hourly": [
-        "temperature_2m",
-        "precipitation",
-        "weathercode",
-        "windspeed_10m",
-        "relativehumidity_2m",
-    ],
-    "current_weather": True,
-    "timezone": "Asia/Bangkok",
+    "spark.hadoop.fs.gs.auth.type": "APPLICATION_DEFAULT",
+    # Memory & parallelism
+    "spark.driver.memory":          "4g",
+    "spark.driver.maxResultSize":   "2g",
+    "spark.executor.instances":     "3",   # 1 executor / worker
+    "spark.executor.cores":         "2",   # fit ca 2 worker nho (2 cores)
+    "spark.executor.memory":        "5g",  # an toan cho worker 6.9GB
+    "spark.sql.shuffle.partitions": "12",  # 3 executors x 2 cores x 2
 }
 
 # ── Business Logic ─────────────────────────────────────────────────────────────
 CONGESTION_SPEED_THRESHOLD_KMH = 20   # dưới ngưỡng này → tắc
-PRODUCER_INTERVAL_SECONDS      = 60   # chu kỳ gửi lên Kafka

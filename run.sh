@@ -24,7 +24,6 @@ if [ -z "$KAFKA_CLUSTER_ID" ]; then
 fi
 
 NODES=("master14" "worker141" "worker142")
-LOG_DIR="/tmp/kraft-combined-logs" 
 EXT_IP=$(curl -s ifconfig.me)
 
 echo "=================================================="
@@ -45,18 +44,25 @@ fi
 echo "1. Synchronizing and Starting Kafka Cluster..."
 for node in "${NODES[@]}"
 do
-    # Kiểm tra và Format Metadata nếu chưa có meta.properties
-    # Sử dụng biến $KAFKA_CLUSTER_ID thay vì ID fix cứng
-    ssh $node "if [ ! -f $LOG_DIR/meta.properties ]; then \
-        echo '      [!] Formatting storage on $node with ID: $KAFKA_CLUSTER_ID'; \
-        $KAFKA_PATH/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c $KAFKA_PATH/config/kraft/server.properties; \
-    fi"
+    # Kiểm tra Kafka đã chạy chưa
+    K_PID=$(ssh $node "jps 2>/dev/null | grep -i 'Kafka' | awk '{print \$1}'")
+    if [ -n "$K_PID" ]; then
+        echo "   -> Kafka @ $node: already RUNNING (PID: $K_PID), skipping start"
+        continue
+    fi
+
+    # --ignore-formatted: no-op nếu đã format rồi → không bao giờ xóa topic cũ
+    echo "   [!] Formatting storage on $node (safe, idempotent)..."
+    ssh $node "$KAFKA_PATH/bin/kafka-storage.sh format --ignore-formatted \
+        -t $KAFKA_CLUSTER_ID \
+        -c $KAFKA_PATH/config/kraft/server.properties"
 
     # Khởi chạy Kafka Server
-    ssh $node "source ~/.bashrc; $KAFKA_PATH/bin/kafka-server-start.sh -daemon $KAFKA_PATH/config/kraft/server.properties"
-    
-    sleep 1
-    K_PID=$(ssh $node "jps | grep -i 'Kafka' | awk '{print \$1}'")
+    ssh $node "source ~/.bashrc; $KAFKA_PATH/bin/kafka-server-start.sh -daemon \
+        $KAFKA_PATH/config/kraft/server.properties"
+
+    sleep 3
+    K_PID=$(ssh $node "jps 2>/dev/null | grep -i 'Kafka' | awk '{print \$1}'")
     if [ -n "$K_PID" ]; then
         echo "   -> Kafka @ $node: RUNNING (PID: $K_PID)"
     else

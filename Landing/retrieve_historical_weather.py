@@ -1,5 +1,5 @@
+import csv
 import json
-import time
 import os
 import sys
 from datetime import date, timedelta
@@ -9,22 +9,27 @@ from google.cloud import storage
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.api_utils import WeatherAPI
-from config import ROAD_SEGMENTS, GCS_BUCKET
+from config import GCS_BUCKET
 
 load_dotenv()
 
-START_DATE       = date(2026, 1, 5)
-INTERVAL_SECONDS = 0.1 * 60           # 30 phút
-ARCHIVE_LAG_DAYS = 1                 # Open-Meteo archive chậm ~5 ngày
+START_DATE       = date(2026, 5, 1)
+ARCHIVE_LAG_DAYS = 1
 GCS_PREFIX       = "landing/weather"
 CHECKPOINT_BLOB  = f"{GCS_PREFIX}/_checkpoint.json"
+LOOKUP_PATH      = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "road_lookup_table.csv")
 
-# Cấu trúc GCS:
-#   landing/weather/weather_historical/
-#     2026-01-05.json    ← tất cả đường, 24h/đường (216 records)
-#     2026-01-06.json
-#     ...
-#     _checkpoint.json
+
+def _load_roads() -> list[dict]:
+    seen = set()
+    roads = []
+    with open(LOOKUP_PATH, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r["name"] in seen:
+                continue
+            seen.add(r["name"])
+            roads.append({"id": r["way_id"], "name": r["name"], "lat": float(r["lat"]), "lon": float(r["lon"])})
+    return roads
 
 
 def get_bucket():
@@ -45,11 +50,7 @@ def write_checkpoint(bucket, last_date: date):
     )
 
 
-def fetch_day(api: WeatherAPI, bucket, target_date: date):
-    """
-    Fetch weather cho tất cả road segments trong 1 ngày → 1 file JSON duy nhất.
-    Cấu trúc: landing/weather/weather_historical/{date}.json
-    """
+def fetch_day(api: WeatherAPI, bucket, roads: list[dict], target_date: date):
     blob_path = f"{GCS_PREFIX}/{target_date.isoformat()}.json"
     blob      = bucket.blob(blob_path)
 
@@ -58,21 +59,19 @@ def fetch_day(api: WeatherAPI, bucket, target_date: date):
         return
 
     all_records = []
-
-    for seg in ROAD_SEGMENTS:
+    for road in roads:
         records = api.get_historical_weather(
-            lat        = seg["lat"],
-            lon        = seg["long"],
+            lat        = road["lat"],
+            lon        = road["lon"],
             start_date = target_date,
             end_date   = target_date,
         )
         if not records:
-            logger.warning(f"Không có dữ liệu cho {seg['name']} ngày {target_date}")
+            logger.warning(f"Không có dữ liệu cho {road['name']} ngày {target_date}")
             continue
-
         for r in records:
-            r["road_name"] = seg["name"]
-            r["road_id"]   = seg["id"]
+            r["road_id"]   = road["id"]
+            r["road_name"] = road["name"]
         all_records.extend(records)
 
     if not all_records:
@@ -86,27 +85,27 @@ def fetch_day(api: WeatherAPI, bucket, target_date: date):
 
 
 def run():
+    """Chạy 1 lần rồi thoát — Airflow lo schedule."""
     api    = WeatherAPI()
     bucket = get_bucket()
+    roads  = _load_roads()
 
-    logger.info(f"=== Historical Weather Fetcher started (from {START_DATE}) ===")
+    last_fetched = read_checkpoint(bucket)
+    end_date     = date.today() - timedelta(days=ARCHIVE_LAG_DAYS)
+    from_date    = last_fetched + timedelta(days=1)
 
-    while True:
-        last_fetched = read_checkpoint(bucket)
-        end_date     = date.today() - timedelta(days=ARCHIVE_LAG_DAYS)
-        from_date    = last_fetched + timedelta(days=1)
+    if from_date > end_date:
+        logger.info(f"Đã cập nhật đến {last_fetched}, không có ngày mới.")
+        return
 
-        if from_date > end_date:
-            logger.info(f"Đã cập nhật đến {last_fetched}, chờ {INTERVAL_SECONDS // 60} phút...")
-        else:
-            logger.info(f"Fetching {from_date} → {end_date}...")
-            current = from_date
-            while current <= end_date:
-                fetch_day(api, bucket, current)
-                write_checkpoint(bucket, current)
-                current += timedelta(days=1)
+    logger.info(f"Fetching {from_date} → {end_date} ({len(roads)} roads)...")
+    current = from_date
+    while current <= end_date:
+        fetch_day(api, bucket, roads, current)
+        write_checkpoint(bucket, current)
+        current += timedelta(days=1)
 
-        time.sleep(INTERVAL_SECONDS)
+    logger.info("Done.")
 
 
 if __name__ == "__main__":
