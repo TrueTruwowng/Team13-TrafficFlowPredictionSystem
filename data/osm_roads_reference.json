@@ -1,0 +1,2595 @@
+{
+  "major_roads": {
+    "Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "28207692",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "38134037",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "332762597",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "576213274",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "954183010",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "954183036",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "964350829",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767220",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767221",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767223",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767226",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767227",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767228",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1169767229",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1206350890",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334157",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334158",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334175",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334176",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334177",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1210334189",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1239628944",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240205396",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240693325",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Phan Kế Bính": [
+      {
+        "osm_id": "28844274",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 120 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "29111563",
+        "highway": "residential"
+      }
+    ],
+    "Phố Trần Tử Bình": [
+      {
+        "osm_id": "29111634",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 387 - Hoàng Quốc Việt": [
+      {
+        "osm_id": "29111636",
+        "highway": "residential"
+      }
+    ],
+    "Đường Cầu Giấy": [
+      {
+        "osm_id": "35841479",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "157394813",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "221297385",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "343741883",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "601973261",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "601973263",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "615426395",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "615426402",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "701844725",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "704938980",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "776703518",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "886446127",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954183008",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954542127",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "973485822",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1121703582",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1121703583",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1165357407",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240683345",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240683346",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1241605219",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1256457624",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1314534274",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1325575768",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1325575769",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1355183493",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1355183494",
+        "highway": "primary"
+      }
+    ],
+    "Đường Nguyễn Văn Huyên": [
+      {
+        "osm_id": "36082532",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "771257039",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "883126622",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "883126623",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954183009",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954183037",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954183038",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "956690100",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "956690101",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "957062225",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "957062227",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "958138889",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "964350830",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1058951236",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1187539398",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1187539403",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1239628943",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240365578",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1242174640",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1314534273",
+        "highway": "primary"
+      }
+    ],
+    "Ngõ 92 Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "36086404",
+        "highway": "residential"
+      }
+    ],
+    "Phố Đông Quan": [
+      {
+        "osm_id": "36207444",
+        "highway": "residential"
+      }
+    ],
+    "Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "37447644",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "37447736",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "38030916",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "136572163",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "148202883",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "180131788",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "180131791",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "184919488",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "420754266",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "616482637",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "616482639",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "686200074",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "686200075",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "954183039",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "967878673",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "967878684",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240365577",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1242174639",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1349483150",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1349483151",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Trần Đăng Ninh": [
+      {
+        "osm_id": "37447734",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "181564349",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "184919490",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "221159061",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "615426398",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "958138884",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "958138887",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1117521890",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1117521891",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1117521892",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240365576",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Đào Tấn": [
+      {
+        "osm_id": "37696595",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "202516833",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "207130526",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "207130527",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "817452577",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "817454548",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "962177673",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Phùng Chí Kiên": [
+      {
+        "osm_id": "37759600",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1205661270",
+        "highway": "tertiary"
+      }
+    ],
+    "Phố Dương Quảng Hàm": [
+      {
+        "osm_id": "37765328",
+        "highway": "residential"
+      }
+    ],
+    "Phố Doãn Kế Thiện": [
+      {
+        "osm_id": "37765383",
+        "highway": "tertiary"
+      }
+    ],
+    "Phố Trần Quý Kiên": [
+      {
+        "osm_id": "37863217",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1226381524",
+        "highway": "residential"
+      }
+    ],
+    "Phố Nguyễn Đình Hoàn": [
+      {
+        "osm_id": "37927290",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Hoàng Sâm": [
+      {
+        "osm_id": "59150323",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1205661269",
+        "highway": "residential"
+      }
+    ],
+    "Phố Hoàng Quán Chi": [
+      {
+        "osm_id": "106049739",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "156898463",
+        "highway": "residential"
+      }
+    ],
+    "Phố Tôn Thất Thuyết": [
+      {
+        "osm_id": "116432097",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "408800725",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "601519290",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "601519291",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "601519292",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "601519293",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1271090830",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1271090831",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1287590942",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Trần Thái Tông": [
+      {
+        "osm_id": "116432102",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "157394825",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709804807",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709804808",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709804809",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709804810",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709816348",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "709816349",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "776703516",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1131469489",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1131469490",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1131469491",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1131469493",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1241275766",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Chùa Hà": [
+      {
+        "osm_id": "136572164",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "148202925",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "967878674",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1226379263",
+        "highway": "residential"
+      }
+    ],
+    "Đường Nguyễn Phong Sắc": [
+      {
+        "osm_id": "148202856",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "221158908",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "221158909",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "958138888",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "958138891",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240355964",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1240365575",
+        "highway": "secondary"
+      }
+    ],
+    "Phố Quan Hoa": [
+      {
+        "osm_id": "148202890",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "712065732",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1165027531",
+        "highway": "secondary"
+      }
+    ],
+    "Ngõ 462 Đường Bưởi": [
+      {
+        "osm_id": "155787301",
+        "highway": "residential"
+      }
+    ],
+    "Đường Bưởi": [
+      {
+        "osm_id": "155925981",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "164031250",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "400124203",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "486370014",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "486370020",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "616545697",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "616545698",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "704933930",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "886446125",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "886446126",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "951487936",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "951487952",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "962177667",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "962177674",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "965548422",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "965992923",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1010846167",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1010846177",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1165593645",
+        "highway": "primary"
+      }
+    ],
+    "Cầu T11": [
+      {
+        "osm_id": "155925985",
+        "highway": "residential"
+      }
+    ],
+    "Phố Nghĩa Đô": [
+      {
+        "osm_id": "156770493",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 158 Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "156785153",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 158/2 Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "156785161",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Phố Hoàng Sâm": [
+      {
+        "osm_id": "156785163",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 118 Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "156785166",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 9 Phố Hoàng Quán Chi": [
+      {
+        "osm_id": "156898446",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Phố Trần Quý Kiên": [
+      {
+        "osm_id": "156898447",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "600597497",
+        "highway": "residential"
+      }
+    ],
+    "Phố Dịch Vọng": [
+      {
+        "osm_id": "156898450",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "157394830",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1271092750",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1271092751",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1271402726",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1271402727",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 143 Phố Quan Hoa": [
+      {
+        "osm_id": "156898451",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Trần Quý Kiên": [
+      {
+        "osm_id": "156898459",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 72 Phố Dịch Vọng": [
+      {
+        "osm_id": "156898460",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 49 Phố Trần Đăng Ninh": [
+      {
+        "osm_id": "156898466",
+        "highway": "residential"
+      }
+    ],
+    "Phố Thành Thái": [
+      {
+        "osm_id": "156898469",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601921044",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601921047",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "687669333",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "958138882",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1131469492",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1131469494",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1205146902",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1205147387",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1241122650",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 3 Phố Thành Thái": [
+      {
+        "osm_id": "156898474",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 55 Phố Dịch Vọng": [
+      {
+        "osm_id": "156898476",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 25 Phố Hoàng Quán Chi": [
+      {
+        "osm_id": "156898477",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 75 Trần Thái Tông": [
+      {
+        "osm_id": "156898479",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 95 Phố Trần Thái Tông": [
+      {
+        "osm_id": "157031805",
+        "highway": "residential"
+      }
+    ],
+    "Phố Nguyễn Đỗ Cung": [
+      {
+        "osm_id": "157338918",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1339280401",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1339280402",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1339282521",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1339282522",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1339282523",
+        "highway": "residential"
+      }
+    ],
+    "Phố Tô Hiệu": [
+      {
+        "osm_id": "157338919",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "157338935",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "967878675",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1210694697",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 233 Phố Tô Hiệu": [
+      {
+        "osm_id": "157339298",
+        "highway": "residential"
+      }
+    ],
+    "Đường B4 Làng Quốc Tế Thăng Long": [
+      {
+        "osm_id": "157339299",
+        "highway": "residential"
+      }
+    ],
+    "Nội khu Làng Quốc Tế Thăng Long": [
+      {
+        "osm_id": "157339300",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 215 Phố Tô Hiệu": [
+      {
+        "osm_id": "157339302",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 89 Đường Nguyễn Phong Sắc": [
+      {
+        "osm_id": "157339303",
+        "highway": "residential"
+      }
+    ],
+    "Đường B2 Làng Quốc Tế Thăng Long": [
+      {
+        "osm_id": "157339309",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "675318592",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1252382049",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 37 Trần Quốc Hoàn": [
+      {
+        "osm_id": "157339311",
+        "highway": "residential"
+      }
+    ],
+    "Đường B3 Làng Quốc Tế Thăng Long": [
+      {
+        "osm_id": "157339312",
+        "highway": "residential"
+      }
+    ],
+    "Phố Trần Quốc Vượng": [
+      {
+        "osm_id": "157394815",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "705241732",
+        "highway": "tertiary"
+      }
+    ],
+    "Phố Trương Công Giai": [
+      {
+        "osm_id": "157394824",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "588629761",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "601492974",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "601492977",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1020811161",
+        "highway": "residential"
+      }
+    ],
+    "Cầu Giấy": [
+      {
+        "osm_id": "157394828",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "158829325",
+        "highway": "primary"
+      }
+    ],
+    "Ngõ 84 Phố Trần Thái Tông": [
+      {
+        "osm_id": "158632065",
+        "highway": "residential"
+      }
+    ],
+    "Phố Dịch Vọng Hậu": [
+      {
+        "osm_id": "158632069",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "399346724",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1254814821",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 3 Phạm Tuấn Tài": [
+      {
+        "osm_id": "162640270",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1244623816",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 6 Trần Quốc Hoàn": [
+      {
+        "osm_id": "162640273",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "675483607",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 41/6 Trần Quốc Hoàn": [
+      {
+        "osm_id": "162640309",
+        "highway": "residential"
+      }
+    ],
+    "Phố Đặng Thùy Trâm": [
+      {
+        "osm_id": "162640320",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "399412593",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "599158094",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1008268815",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1008268819",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 86 Phố Chùa Hà": [
+      {
+        "osm_id": "162654542",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 12 Nguyễn Văn Huyên": [
+      {
+        "osm_id": "162654545",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 10/19 Đường Nguyễn Văn Huyên": [
+      {
+        "osm_id": "162654546",
+        "highway": "residential"
+      }
+    ],
+    "Phố Phạm Tuấn Tài": [
+      {
+        "osm_id": "162931629",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1008268818",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1240683353",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 49 Phố Trần Cung": [
+      {
+        "osm_id": "162931638",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Phố Đặng Thùy Trâm": [
+      {
+        "osm_id": "163042040",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 106 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "163047072",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 381 Nguyễn Khang": [
+      {
+        "osm_id": "163053433",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "570594286",
+        "highway": "residential"
+      }
+    ],
+    "395 Nguyễn Khang": [
+      {
+        "osm_id": "163053434",
+        "highway": "secondary"
+      }
+    ],
+    "Ngõ 3 Tôn Thất Thuyết": [
+      {
+        "osm_id": "163361494",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 82 Phố Dịch Vọng Hậu": [
+      {
+        "osm_id": "163361495",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 36 Duy Tân": [
+      {
+        "osm_id": "163361500",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 376 Đường Bưởi": [
+      {
+        "osm_id": "163886352",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "600162668",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 260 Đường Cầu Giấy": [
+      {
+        "osm_id": "207306756",
+        "highway": "residential"
+      }
+    ],
+    "Phố Duy Tân": [
+      {
+        "osm_id": "295514386",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "570591936",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601900548",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601900551",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601921049",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "601921051",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 180 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "331329425",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 234 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "332655860",
+        "highway": "residential"
+      }
+    ],
+    "Phố Kim Mã": [
+      {
+        "osm_id": "343741881",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1315272149",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1360061190",
+        "highway": "secondary"
+      }
+    ],
+    "Đường Hồ Tùng Mậu": [
+      {
+        "osm_id": "397906315",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "1325575737",
+        "highway": "trunk"
+      }
+    ],
+    "Phố Thọ Tháp": [
+      {
+        "osm_id": "399346533",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1205147833",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1205148104",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1226389487",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 43 Dịch Vọng Hậu": [
+      {
+        "osm_id": "399346760",
+        "highway": "residential"
+      }
+    ],
+    "Phố Phan Văn Trường": [
+      {
+        "osm_id": "399407005",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1148378821",
+        "highway": "residential"
+      }
+    ],
+    "Phố Nghĩa Tân": [
+      {
+        "osm_id": "399416502",
+        "highway": "residential"
+      }
+    ],
+    "Đường Láng": [
+      {
+        "osm_id": "400124197",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "704933929",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "704938984",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954542126",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1213248858",
+        "highway": "primary"
+      }
+    ],
+    "Cầu vượt Bưởi": [
+      {
+        "osm_id": "400124201",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "492297089",
+        "highway": "trunk"
+      }
+    ],
+    "Ngõ 210 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "402562120",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 78 Duy Tân": [
+      {
+        "osm_id": "405269245",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 15 Duy Tân": [
+      {
+        "osm_id": "405269246",
+        "highway": "residential"
+      }
+    ],
+    "Đường Vành đai 2": [
+      {
+        "osm_id": "406325519",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "447623862",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "492297094",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "492297096",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148634",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148639",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148645",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148650",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "702569720",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "702569721",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "702577583",
+        "highway": "trunk"
+      }
+    ],
+    "Ngõ 1 Phạm Hùng": [
+      {
+        "osm_id": "406406342",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 20 Đường Phạm Hùng": [
+      {
+        "osm_id": "465071902",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 16 Đường Phạm Hùng": [
+      {
+        "osm_id": "465071906",
+        "highway": "residential"
+      }
+    ],
+    "Đường Xuân Thủy": [
+      {
+        "osm_id": "482324745",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "788967973",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1239581822",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240182990",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240683351",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1368317682",
+        "highway": "primary"
+      }
+    ],
+    "Cầu Đào Tấn": [
+      {
+        "osm_id": "492297091",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "492297092",
+        "highway": "trunk"
+      }
+    ],
+    "Cầu vượt Nút giao Cầu Giấy": [
+      {
+        "osm_id": "492297097",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "492297098",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "704938985",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "883126626",
+        "highway": "trunk"
+      }
+    ],
+    "Phố Trần Cung": [
+      {
+        "osm_id": "503707345",
+        "highway": "secondary"
+      }
+    ],
+    "Ngách 76/2 Duy Tân": [
+      {
+        "osm_id": "563554405",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 86 Duy Tân": [
+      {
+        "osm_id": "570401887",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "570591930",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "601569881",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "704914646",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1040431958",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1425288811",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 82 Phố Duy Tân": [
+      {
+        "osm_id": "570591931",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 11 Duy Tân": [
+      {
+        "osm_id": "570591934",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 45 Trần Thái Tông": [
+      {
+        "osm_id": "570591937",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 385 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "570600511",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 238 Hoàng Quốc Việt": [
+      {
+        "osm_id": "598689303",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 26 Phố Tô Hiệu": [
+      {
+        "osm_id": "599521460",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 130 Đường Xuân Thủy": [
+      {
+        "osm_id": "600018755",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 23 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018762",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 25 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018763",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 27 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018765",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 29 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018766",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 31 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018771",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 33 Phố Phan Văn Trường": [
+      {
+        "osm_id": "600018773",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 2 Ngõ 10 Nguyễn Văn Huyên": [
+      {
+        "osm_id": "600054867",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1213763398",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1417258127",
+        "highway": "residential"
+      }
+    ],
+    "Đường A4 Làng Quốc Tế Thăng Long": [
+      {
+        "osm_id": "600054877",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 118/6 Đường Nguyễn Khánh Toàn": [
+      {
+        "osm_id": "600127277",
+        "highway": "residential"
+      }
+    ],
+    "Cầu Đội Cấn": [
+      {
+        "osm_id": "600148631",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148637",
+        "highway": "trunk"
+      }
+    ],
+    "Cầu Đồng Quan": [
+      {
+        "osm_id": "600148642",
+        "highway": "trunk"
+      },
+      {
+        "osm_id": "600148647",
+        "highway": "trunk"
+      }
+    ],
+    "Phố Đội Cấn": [
+      {
+        "osm_id": "600148658",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "600148659",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 20 Phố Trần Quý Kiên": [
+      {
+        "osm_id": "600597499",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 7 Tôn Thất Thuyết": [
+      {
+        "osm_id": "601519308",
+        "highway": "residential"
+      }
+    ],
+    "Đường Phạm Hùng": [
+      {
+        "osm_id": "601522752",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "703521535",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "705241731",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "953158818",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "958138881",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1239581821",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240344625",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240344628",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1325575738",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1359074565",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1359074566",
+        "highway": "primary"
+      }
+    ],
+    "Hẻm 7/2/6 Trần Quốc Vượng": [
+      {
+        "osm_id": "601558829",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 78/3 Trần Quốc Vượng": [
+      {
+        "osm_id": "601558831",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 78/5 Trần Quốc Vượng": [
+      {
+        "osm_id": "601558833",
+        "highway": "residential"
+      }
+    ],
+    "Phố Khúc Thừa Dụ": [
+      {
+        "osm_id": "601578052",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1205148105",
+        "highway": "tertiary"
+      }
+    ],
+    "Ngõ 4 Phố Duy Tân": [
+      {
+        "osm_id": "601578053",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 3 Duy Tân": [
+      {
+        "osm_id": "601900559",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 90": [
+      {
+        "osm_id": "607823943",
+        "highway": "residential"
+      }
+    ],
+    "Cầu Dịch Vọng": [
+      {
+        "osm_id": "616482638",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "616482640",
+        "highway": "secondary"
+      }
+    ],
+    "Ngõ 30 Phố Trần Quý Kiên": [
+      {
+        "osm_id": "675318586",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 12 Phố Trần Quý Kiên": [
+      {
+        "osm_id": "675318589",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 76 Duy Tân": [
+      {
+        "osm_id": "683883230",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 15 Phố Duy Tân": [
+      {
+        "osm_id": "683883235",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "705175745",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 61 Phố Phạm Tuấn Tài": [
+      {
+        "osm_id": "684077606",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 59 Phố Quan Hoa": [
+      {
+        "osm_id": "684081826",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 181 Đường Xuân Thủy": [
+      {
+        "osm_id": "688303165",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Đường Hoàng Quốc Việt": [
+      {
+        "osm_id": "703978560",
+        "highway": "residential"
+      }
+    ],
+    "Đường Võ Chí Công": [
+      {
+        "osm_id": "703978561",
+        "highway": "primary"
+      }
+    ],
+    "Ngõ 19 Duy Tân": [
+      {
+        "osm_id": "704890519",
+        "highway": "residential"
+      },
+      {
+        "osm_id": "1280444763",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 76/8 Duy Tân": [
+      {
+        "osm_id": "705486882",
+        "highway": "residential"
+      }
+    ],
+    "Đường Phạm Văn Đồng": [
+      {
+        "osm_id": "721496143",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "721496144",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "858369194",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954183015",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "965521318",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "965882630",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "965882631",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003224",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003225",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003231",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003232",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003233",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003234",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003236",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003238",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003239",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003241",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003243",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003244",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1098003245",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1117957804",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1140695086",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178369252",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240182989",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240344626",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1240344627",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1410884566",
+        "highway": "primary"
+      }
+    ],
+    "Ngõ 199 Trần Quốc Hoàn": [
+      {
+        "osm_id": "776692700",
+        "highway": "residential"
+      }
+    ],
+    "Phố Trần Quốc Hoàn": [
+      {
+        "osm_id": "810684489",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1292780147",
+        "highway": "tertiary"
+      },
+      {
+        "osm_id": "1292780148",
+        "highway": "tertiary"
+      }
+    ],
+    "Cầu vượt Nguyễn Văn Huyên": [
+      {
+        "osm_id": "842076827",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "842935944",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "954152007",
+        "highway": "primary"
+      }
+    ],
+    "Đường Xuân Tảo": [
+      {
+        "osm_id": "883126621",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "883126624",
+        "highway": "primary"
+      }
+    ],
+    "Vòng Xoay Bưởi - Vành Đai 2": [
+      {
+        "osm_id": "886446131",
+        "highway": "trunk"
+      }
+    ],
+    "Ngõ 46 Phố Trần Quốc Hoàn": [
+      {
+        "osm_id": "897371658",
+        "highway": "residential"
+      }
+    ],
+    "Phố Huỳnh Thúc Kháng": [
+      {
+        "osm_id": "943577306",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1197003491",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1197003492",
+        "highway": "secondary"
+      }
+    ],
+    "Ngõ 92 Phố Trần Thái Tông": [
+      {
+        "osm_id": "947835481",
+        "highway": "residential"
+      }
+    ],
+    "Đường Đặng Thùy Trâm": [
+      {
+        "osm_id": "1007888170",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 56 Trương Công Giai": [
+      {
+        "osm_id": "1016029704",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 6 Phố Trần Quốc Hoàn": [
+      {
+        "osm_id": "1119291005",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 133 Nguyễn Phong Sắc": [
+      {
+        "osm_id": "1119584048",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 1 Phạm Tuấn Tài": [
+      {
+        "osm_id": "1120555120",
+        "highway": "residential"
+      }
+    ],
+    "Ngách 53 Ngõ 68 Phố Cầu Giấy": [
+      {
+        "osm_id": "1152858088",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 6 Đặng Thùy Trâm": [
+      {
+        "osm_id": "1164422292",
+        "highway": "residential"
+      }
+    ],
+    "Đường La Thành": [
+      {
+        "osm_id": "1173606571",
+        "highway": "secondary"
+      },
+      {
+        "osm_id": "1197003490",
+        "highway": "secondary"
+      }
+    ],
+    "Ngõ 6 Phố Vĩnh Phúc": [
+      {
+        "osm_id": "1174913972",
+        "highway": "residential"
+      }
+    ],
+    "Cầu vượt Mai Dịch": [
+      {
+        "osm_id": "1178012521",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178012522",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178012523",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178012524",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178012525",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1178012526",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1361646381",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1361646382",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1361646387",
+        "highway": "primary"
+      },
+      {
+        "osm_id": "1361646388",
+        "highway": "primary"
+      }
+    ],
+    "Ngõ 10 Đường Nguyễn Văn Huyên": [
+      {
+        "osm_id": "1187539399",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 107 Trần Quốc Vượng": [
+      {
+        "osm_id": "1201844269",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 2 Hoàng Sâm": [
+      {
+        "osm_id": "1213231865",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 68 Đường Cầu Giấy": [
+      {
+        "osm_id": "1238802571",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 66 Dịch Vọng Hậu": [
+      {
+        "osm_id": "1254507006",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 1 Phố Dịch Vọng Hậu": [
+      {
+        "osm_id": "1255919811",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 25 Phố Dịch Vọng Hậu": [
+      {
+        "osm_id": "1255919812",
+        "highway": "residential"
+      }
+    ],
+    "Thành Thái": [
+      {
+        "osm_id": "1388556851",
+        "highway": "residential"
+      }
+    ],
+    "Ngõ 57 Dịch Vọng": [
+      {
+        "osm_id": "1417744707",
+        "highway": "residential"
+      }
+    ]
+  },
+  "segment_mapping": [
+    {
+      "seg_name": "HQV - PTT",
+      "osm_id": "1240683353",
+      "road_name": "Phố Phạm Tuấn Tài",
+      "highway": "residential",
+      "dist_m": 7.5,
+      "top5": [
+        {
+          "osm_id": "1240683353",
+          "name": "Phố Phạm Tuấn Tài",
+          "highway": "residential",
+          "dist_m": 7.5
+        },
+        {
+          "osm_id": "1240693325",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 41.0
+        },
+        {
+          "osm_id": "1169767226",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 55.5
+        },
+        {
+          "osm_id": "684077606",
+          "name": "Ngõ 61 Phố Phạm Tuấn Tài",
+          "highway": "residential",
+          "dist_m": 131.5
+        },
+        {
+          "osm_id": "162931629",
+          "name": "Phố Phạm Tuấn Tài",
+          "highway": "residential",
+          "dist_m": 134.7
+        }
+      ]
+    },
+    {
+      "seg_name": "HQV - NPS",
+      "osm_id": "503707345",
+      "road_name": "Phố Trần Cung",
+      "highway": "secondary",
+      "dist_m": 60.0,
+      "top5": [
+        {
+          "osm_id": "503707345",
+          "name": "Phố Trần Cung",
+          "highway": "secondary",
+          "dist_m": 60.0
+        },
+        {
+          "osm_id": "332762597",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 104.9
+        },
+        {
+          "osm_id": "331329425",
+          "name": "Ngõ 180 Đường Hoàng Quốc Việt",
+          "highway": "residential",
+          "dist_m": 111.5
+        },
+        {
+          "osm_id": "162931638",
+          "name": "Ngõ 49 Phố Trần Cung",
+          "highway": "residential",
+          "dist_m": 176.1
+        },
+        {
+          "osm_id": "1169767227",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 181.1
+        }
+      ]
+    },
+    {
+      "seg_name": "HQV - NT",
+      "osm_id": "163047072",
+      "road_name": "Ngõ 106 Đường Hoàng Quốc Việt",
+      "highway": "residential",
+      "dist_m": 60.0,
+      "top5": [
+        {
+          "osm_id": "163047072",
+          "name": "Ngõ 106 Đường Hoàng Quốc Việt",
+          "highway": "residential",
+          "dist_m": 60.0
+        },
+        {
+          "osm_id": "156770493",
+          "name": "Phố Nghĩa Đô",
+          "highway": "tertiary",
+          "dist_m": 126.2
+        },
+        {
+          "osm_id": "1169767228",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 170.9
+        },
+        {
+          "osm_id": "29111563",
+          "name": "Ngõ 120 Đường Hoàng Quốc Việt",
+          "highway": "residential",
+          "dist_m": 208.7
+        },
+        {
+          "osm_id": "38134037",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 235.8
+        }
+      ]
+    },
+    {
+      "seg_name": "HQV - NVH",
+      "osm_id": "964350830",
+      "road_name": "Đường Nguyễn Văn Huyên",
+      "highway": "primary",
+      "dist_m": 24.8,
+      "top5": [
+        {
+          "osm_id": "964350830",
+          "name": "Đường Nguyễn Văn Huyên",
+          "highway": "primary",
+          "dist_m": 24.8
+        },
+        {
+          "osm_id": "1169767229",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 34.4
+        },
+        {
+          "osm_id": "964350829",
+          "name": "Đường Hoàng Quốc Việt",
+          "highway": "secondary",
+          "dist_m": 39.9
+        },
+        {
+          "osm_id": "883126621",
+          "name": "Đường Xuân Tảo",
+          "highway": "primary",
+          "dist_m": 49.3
+        },
+        {
+          "osm_id": "1239628943",
+          "name": "Đường Nguyễn Văn Huyên",
+          "highway": "primary",
+          "dist_m": 49.7
+        }
+      ]
+    },
+    {
+      "seg_name": "TDN - NPS",
+      "osm_id": "1240355964",
+      "road_name": "Đường Nguyễn Phong Sắc",
+      "highway": "secondary",
+      "dist_m": 5.4,
+      "top5": [
+        {
+          "osm_id": "1240355964",
+          "name": "Đường Nguyễn Phong Sắc",
+          "highway": "secondary",
+          "dist_m": 5.4
+        },
+        {
+          "osm_id": "958138887",
+          "name": "Phố Trần Đăng Ninh",
+          "highway": "secondary",
+          "dist_m": 7.9
+        },
+        {
+          "osm_id": "1117521892",
+          "name": "Phố Trần Đăng Ninh",
+          "highway": "secondary",
+          "dist_m": 15.1
+        },
+        {
+          "osm_id": "1240365575",
+          "name": "Đường Nguyễn Phong Sắc",
+          "highway": "secondary",
+          "dist_m": 26.6
+        },
+        {
+          "osm_id": "1240365576",
+          "name": "Phố Trần Đăng Ninh",
+          "highway": "secondary",
+          "dist_m": 36.3
+        }
+      ]
+    },
+    {
+      "seg_name": "NVH - NKT",
+      "osm_id": "1240365577",
+      "road_name": "Đường Nguyễn Khánh Toàn",
+      "highway": "secondary",
+      "dist_m": 6.0,
+      "top5": [
+        {
+          "osm_id": "1240365577",
+          "name": "Đường Nguyễn Khánh Toàn",
+          "highway": "secondary",
+          "dist_m": 6.0
+        },
+        {
+          "osm_id": "1242174639",
+          "name": "Đường Nguyễn Khánh Toàn",
+          "highway": "secondary",
+          "dist_m": 6.2
+        },
+        {
+          "osm_id": "1242174640",
+          "name": "Đường Nguyễn Văn Huyên",
+          "highway": "primary",
+          "dist_m": 12.7
+        },
+        {
+          "osm_id": "956690101",
+          "name": "Đường Nguyễn Văn Huyên",
+          "highway": "primary",
+          "dist_m": 20.0
+        },
+        {
+          "osm_id": "1240365578",
+          "name": "Đường Nguyễn Văn Huyên",
+          "highway": "primary",
+          "dist_m": 30.7
+        }
+      ]
+    },
+    {
+      "seg_name": "NKT - DQH",
+      "osm_id": "36086404",
+      "road_name": "Ngõ 92 Đường Nguyễn Khánh Toàn",
+      "highway": "residential",
+      "dist_m": 83.1,
+      "top5": [
+        {
+          "osm_id": "36086404",
+          "name": "Ngõ 92 Đường Nguyễn Khánh Toàn",
+          "highway": "residential",
+          "dist_m": 83.1
+        },
+        {
+          "osm_id": "600127277",
+          "name": "Ngách 118/6 Đường Nguyễn Khánh Toàn",
+          "highway": "residential",
+          "dist_m": 127.6
+        },
+        {
+          "osm_id": "1349483151",
+          "name": "Đường Nguyễn Khánh Toàn",
+          "highway": "secondary",
+          "dist_m": 174.1
+        },
+        {
+          "osm_id": "156785166",
+          "name": "Ngõ 118 Đường Nguyễn Khánh Toàn",
+          "highway": "residential",
+          "dist_m": 184.6
+        },
+        {
+          "osm_id": "156898451",
+          "name": "Ngõ 143 Phố Quan Hoa",
+          "highway": "residential",
+          "dist_m": 184.9
+        }
+      ]
+    },
+    {
+      "seg_name": "CG - TQK",
+      "osm_id": "615426395",
+      "road_name": "Đường Cầu Giấy",
+      "highway": "primary",
+      "dist_m": 32.5,
+      "top5": [
+        {
+          "osm_id": "615426395",
+          "name": "Đường Cầu Giấy",
+          "highway": "primary",
+          "dist_m": 32.5
+        },
+        {
+          "osm_id": "1241605219",
+          "name": "Đường Cầu Giấy",
+          "highway": "primary",
+          "dist_m": 58.3
+        },
+        {
+          "osm_id": "600597497",
+          "name": "Ngõ 2 Phố Trần Quý Kiên",
+          "highway": "residential",
+          "dist_m": 75.7
+        },
+        {
+          "osm_id": "776703518",
+          "name": "Đường Cầu Giấy",
+          "highway": "primary",
+          "dist_m": 77.9
+        },
+        {
+          "osm_id": "675318589",
+          "name": "Ngõ 12 Phố Trần Quý Kiên",
+          "highway": "residential",
+          "dist_m": 92.1
+        }
+      ]
+    },
+    {
+      "seg_name": "CG - TDN",
+      "osm_id": "615426402",
+      "road_name": "Đường Cầu Giấy",
+      "highway": "primary",
+      "dist_m": 48.0,
+      "top5": [
+        {
+          "osm_id": "615426402",
+          "name": "Đường Cầu Giấy",
+          "highway": "primary",
+          "dist_m": 48.0
+        },
+        {
+          "osm_id": "701844725",
+          "name": "Đường Cầu Giấy",
+          "highway": "primary",
+          "dist_m": 58.8
+        },
+        {
+          "osm_id": "615426398",
+          "name": "Phố Trần Đăng Ninh",
+          "highway": "tertiary",
+          "dist_m": 67.8
+        },
+        {
+          "osm_id": "156898447",
+          "name": "Ngõ 2 Phố Trần Quý Kiên",
+          "highway": "residential",
+          "dist_m": 101.2
+        },
+        {
+          "osm_id": "157394830",
+          "name": "Phố Dịch Vọng",
+          "highway": "residential",
+          "dist_m": 120.5
+        }
+      ]
+    }
+  ]
+}

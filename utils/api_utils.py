@@ -67,7 +67,7 @@ class WeatherAPI:
                 "weathercode":   weather_code,
                 "weather":       WMO_CODE_MAP.get(weather_code, "Unknown"),
                 "humidity":      humidity,
-                "precipitation": precipitation,
+                "precipitation": precipitation if precipitation is not None else 0.0,
                 "ingestion_time": now_vn().isoformat(),
             }
 

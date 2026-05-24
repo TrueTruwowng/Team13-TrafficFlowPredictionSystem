@@ -7,7 +7,7 @@ services:
       - "8085:8080" # Map port 8085 ngoài máy thật vào 8080 của container
     environment:
       - KAFKA_CLUSTERS_0_NAME=UET-BigData-Cluster
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=10.148.0.2:9092,10.148.0.3:9092,10.148.0.4:9092
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=master14:9092
     extra_hosts:
       - "master14:10.148.0.2"
       - "worker141:10.148.0.3"
