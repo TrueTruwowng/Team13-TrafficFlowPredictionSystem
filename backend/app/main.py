@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routers.datasets import router as datasets_router
+from app.routers.maps import router as maps_router
 
 
 app = FastAPI(title="TrafficFlow Backend", version="0.1.0")
@@ -18,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(datasets_router)
+app.include_router(maps_router)
 
 
 @app.get("/health")

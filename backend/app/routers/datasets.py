@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import date
+import re
 
 from fastapi import APIRouter, HTTPException, Query
 
 from app.core.config import settings
 from app.db.duckdb_client import DuckDBClient
-from app.schemas import DatasetListResponse, DatasetObjectResponse, DateRangeDataResponse, DayDataResponse, DayRoadCountResponse, PreviewResponse, RoadComparisonResponse, StatsResponse
+from app.schemas import DatasetListResponse, DatasetObjectResponse, DateRangeDataResponse, DayDataResponse, DayRoadCountResponse, LatestLayerDataResponse, LayerDatesResponse, PreviewResponse, RoadComparisonResponse, StatsResponse
 from app.services.gcs_repository import GCSParquetRepository
 
 
@@ -18,6 +19,7 @@ repository = GCSParquetRepository(
     cache_dir=settings.cache_dir,
 )
 duckdb_client = DuckDBClient(settings.duckdb_path)
+DATE_PART_PATTERN = re.compile(r"(?:^|/)date=(\d{4}-\d{2}-\d{2})(?:/|$)")
 
 
 def _filter_frame_by_road(frame, road_name: str | None):
@@ -39,6 +41,65 @@ def _filter_frame_by_road(frame, road_name: str | None):
 
     normalized_values = frame[road_column].fillna("").astype(str).str.strip()
     return frame.loc[normalized_values == normalized_road_name]
+
+
+def _layer_prefix_from_gold(layer: str) -> str:
+    normalized_prefix = settings.gcs_prefix.strip("/")
+    parts = [part for part in normalized_prefix.split("/") if part]
+    if "gold" in parts:
+        parts[parts.index("gold")] = layer
+        return "/".join(parts)
+    if parts:
+        return "/".join([layer, *parts[1:]]) if parts[0] in {"silver", "bronze"} else layer
+    return layer
+
+
+def _extract_object_date(object_name: str) -> date | None:
+    match = DATE_PART_PATTERN.search(object_name)
+    if not match:
+        return None
+    return date.fromisoformat(match.group(1))
+
+
+def _repository_for_layer(layer: str) -> tuple[str, GCSParquetRepository]:
+    layer_prefix = _layer_prefix_from_gold(layer)
+    return layer_prefix, GCSParquetRepository(
+        bucket_name=settings.gcs_bucket,
+        prefix=layer_prefix,
+        cache_dir=settings.cache_dir,
+    )
+
+
+def _get_latest_layer_data(layer: str) -> LatestLayerDataResponse:
+    if not settings.gcs_bucket:
+        raise HTTPException(status_code=400, detail="GCS_BUCKET is not configured")
+
+    layer_prefix, layer_repository = _repository_for_layer(layer)
+
+    object_names = layer_repository.list_parquet_objects()
+    latest_date = max((object_date for name in object_names if (object_date := _extract_object_date(name)) is not None), default=None)
+    if latest_date is None:
+        return LatestLayerDataResponse(
+            layer=layer,
+            prefix=layer_prefix,
+            object_count=0,
+            columns=[],
+            row_count=0,
+            rows=[],
+        )
+
+    latest_object_names = layer_repository.list_parquet_objects_for_date(latest_date)
+    local_paths = layer_repository.download_many(latest_object_names)
+    frame = duckdb_client.read_parquet_files(local_paths)
+    return LatestLayerDataResponse(
+        layer=layer,
+        prefix=layer_prefix,
+        target_date=latest_date.isoformat(),
+        object_count=len(latest_object_names),
+        columns=list(frame.columns),
+        row_count=int(len(frame)),
+        rows=frame.to_dict(orient="records"),
+    )
 
 
 @router.get("", response_model=DatasetListResponse)
@@ -73,6 +134,53 @@ def get_day_data(target_date: date = Query(...), road_name: str | None = Query(d
     frame = _filter_frame_by_road(frame, road_name)
     return DayDataResponse(
         target_date=target_date.isoformat(),
+        columns=list(frame.columns),
+        row_count=int(len(frame)),
+        rows=frame.to_dict(orient="records"),
+    )
+
+
+@router.get("/silver/latest/data", response_model=LatestLayerDataResponse)
+def get_latest_silver_data() -> LatestLayerDataResponse:
+    return _get_latest_layer_data("silver")
+
+
+@router.get("/silver/dates", response_model=LayerDatesResponse)
+def list_silver_dates() -> LayerDatesResponse:
+    if not settings.gcs_bucket:
+        raise HTTPException(status_code=400, detail="GCS_BUCKET is not configured")
+
+    layer_prefix, layer_repository = _repository_for_layer("silver")
+    object_names = layer_repository.list_parquet_objects()
+    dates = sorted({object_date.isoformat() for name in object_names if (object_date := _extract_object_date(name)) is not None})
+    return LayerDatesResponse(layer="silver", prefix=layer_prefix, dates=dates)
+
+
+@router.get("/silver/by-date/data", response_model=LatestLayerDataResponse)
+def get_silver_data_by_date(target_date: date = Query(...)) -> LatestLayerDataResponse:
+    if not settings.gcs_bucket:
+        raise HTTPException(status_code=400, detail="GCS_BUCKET is not configured")
+
+    layer_prefix, layer_repository = _repository_for_layer("silver")
+    object_names = layer_repository.list_parquet_objects_for_date(target_date)
+    if not object_names:
+        return LatestLayerDataResponse(
+            layer="silver",
+            prefix=layer_prefix,
+            target_date=target_date.isoformat(),
+            object_count=0,
+            columns=[],
+            row_count=0,
+            rows=[],
+        )
+
+    local_paths = layer_repository.download_many(object_names)
+    frame = duckdb_client.read_parquet_files(local_paths)
+    return LatestLayerDataResponse(
+        layer="silver",
+        prefix=layer_prefix,
+        target_date=target_date.isoformat(),
+        object_count=len(object_names),
         columns=list(frame.columns),
         row_count=int(len(frame)),
         rows=frame.to_dict(orient="records"),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import TopNavbar from "../components/top-navbar";
 
 export const metadata: Metadata = {
   title: "TrafficFlow Dashboard",
@@ -14,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <TopNavbar />
+        {children}
+      </body>
     </html>
   );
 }

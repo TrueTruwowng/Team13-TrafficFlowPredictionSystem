@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+MAPS_DIR = BASE_DIR / "app" / "utils" / "maps"
 load_dotenv(BASE_DIR / ".env")
 
 
@@ -16,6 +17,11 @@ def _split_csv(value: str | None, default: list[str]) -> list[str]:
         return default
     items = [item.strip() for item in value.split(",")]
     return [item for item in items if item]
+
+
+def _path_from_env(name: str, default: Path) -> Path:
+    value = os.getenv(name, "").strip()
+    return Path(value) if value else default
 
 
 @dataclass(frozen=True)
@@ -32,6 +38,12 @@ class Settings:
             os.getenv("CORS_ORIGINS"),
             ["http://localhost:3000", "http://127.0.0.1:3000"],
         )
+    )
+    nghia_do_net_xml_path: Path = field(
+        default_factory=lambda: _path_from_env("NGHIA_DO_NET_XML_PATH", MAPS_DIR / "nghia_do.net.xml")
+    )
+    nghia_do_osm_xml_path: Path = field(
+        default_factory=lambda: _path_from_env("NGHIA_DO_OSM_XML_PATH", MAPS_DIR / "nghia_do_cut.osm.xml")
     )
 
 
