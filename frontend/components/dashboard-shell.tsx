@@ -650,10 +650,7 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
         <section className="hero light-hero">
           <div className="hero-card light-card">
             <div className="hero-kicker light-kicker">TrafficFlow Dashboard</div>
-            <h1 className="hero-title light-title">Xem dữ liệu theo ngày, với giao diện sáng và rõ trạng thái Cloud.</h1>
-            <p className="hero-copy light-copy">
-              Chọn một ngày, bấm Submit, rồi xem dữ liệu được tải trực tiếp từ GCS qua backend. UI này ưu tiên đơn giản, dễ dùng và tránh tự gọi request khi chưa bấm nút.
-            </p>
+            <h1 className="hero-title light-title">Traffic flow platform</h1>
 
             <div className="hero-stats light-stats">
               <div className="metric-card light-metric">

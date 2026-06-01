@@ -460,9 +460,7 @@ export default function VisualizationPage() {
   }, [geoJsonData, leafletReady]);
 
   const detailText = payload?.target_date
-    ? `Dữ liệu silver đang hiển thị là ngày ${payload.target_date}, gồm ${formatNumber(payload.object_count)} file parquet và ${formatNumber(payload.row_count)} dòng. ${
-        submittedMinute === null ? "Bản đồ đang dùng toàn bộ thời điểm trong ngày." : `Bản đồ đang dùng thời điểm gần nhất ${minuteToTimeInput(submittedMinute)}.`
-      }`
+    ? `Dữ liệu mới nhất của ngày ${payload.target_date}`
     : "Chưa có dữ liệu silver để hiển thị trên bản đồ.";
 
   return (
@@ -471,7 +469,7 @@ export default function VisualizationPage() {
         <div className="visualization-header">
           <div>
             <div className="hero-kicker light-kicker">Trực quan hóa</div>
-            <h1 className="visualization-title">Bản đồ mật độ giao thông Nghĩa Đô</h1>
+            <h1 className="visualization-title">Mật độ giao thông</h1>
             <p className="visualization-copy">{detailText}</p>
           </div>
         </div>
