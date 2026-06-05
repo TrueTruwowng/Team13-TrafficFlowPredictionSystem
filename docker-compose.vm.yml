@@ -4,7 +4,7 @@ services:
       context: ./backend
     environment:
       DASHBOARD_CACHE_DIR: /app/.cache/parquet
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://34.87.32.80:3000,http://localhost:3000,http://127.0.0.1:3000}
       WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "8000:8000"
@@ -17,7 +17,7 @@ services:
     build:
       context: ./frontend
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://34.87.32.80:8000}
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
       NEXT_TELEMETRY_DISABLED: "1"
