@@ -4,12 +4,11 @@ export function getApiBaseUrl(): string {
 
   if (typeof window !== "undefined") {
     const h = window.location.hostname;
-    if (h === "localhost" || h === "127.0.0.1") return "http://localhost:8000";
-    return "http://backend:8000"; // when running inside Docker compose
+    return `http://${h}:8001`;
   }
 
-  // Server-side fallback (assume compose network)
-  return "http://backend:8000";
+  // Server-side fallback
+  return "http://localhost:8001";
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {

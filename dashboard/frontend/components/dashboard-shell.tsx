@@ -19,6 +19,15 @@ type FilterSummary = {
 
 type SortDirection = "asc" | "desc";
 
+// Module-level cache — survives component unmount/remount (tab switches) without sessionStorage quota issues
+interface DataCache {
+  payload: DayDataResponse;
+  submittedDate: string;
+  submittedRoad: string;
+  cachedAt: number;
+}
+let _dataCache: DataCache | null = null;
+
 function extractDateFromName(name: string): string | null {
   const match = /date=(\d{4}-\d{2}-\d{2})/.exec(name);
   return match?.[1] ?? null;
@@ -34,6 +43,45 @@ function formatNumber(value: number | null | undefined, digits = 0): string {
     minimumFractionDigits: digits,
   }).format(value);
 }
+
+function formatAxisValue(v: number): string {
+  if (v === 0) return "0";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+  return String(Math.round(v));
+}
+
+function getWeatherEmoji(condition: string | null): string {
+  if (!condition) return "🌡";
+  const c = condition.toLowerCase();
+  if (c.includes("thunder") || c.includes("storm") || c.includes("sấm")) return "⛈";
+  if (c.includes("rain") || c.includes("mưa") || c.includes("drizzle")) return "🌧";
+  if (c.includes("snow") || c.includes("tuyết")) return "❄️";
+  if (c.includes("fog") || c.includes("mist") || c.includes("sương")) return "🌫";
+  if (c.includes("cloud") || c.includes("mây") || c.includes("overcast") || c.includes("u ám")) return "☁️";
+  if (c.includes("partly") || c.includes("few") || c.includes("ít mây")) return "⛅";
+  if (c.includes("clear") || c.includes("sunny") || c.includes("nắng") || c.includes("quang")) return "☀️";
+  return "🌡";
+}
+
+function getWeatherDisplayName(condition: string | null): string {
+  if (!condition) return "";
+  const map: Record<string, string> = {
+    "clear sky": "Trời quang",
+    "few clouds": "Ít mây",
+    "scattered clouds": "Mây rải rác",
+    "broken clouds": "Nhiều mây",
+    "overcast clouds": "Trời u ám",
+    "light rain": "Mưa nhẹ",
+    "moderate rain": "Mưa vừa",
+    "heavy intensity rain": "Mưa to",
+    "thunderstorm": "Dông",
+    "mist": "Sương mù",
+    "fog": "Sương dày",
+  };
+  return map[condition.toLowerCase()] ?? condition;
+}
+
 
 function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -85,7 +133,10 @@ function getHour(row: Record<string, unknown>): number | null {
 }
 
 function buildRoadNames(rows: Record<string, unknown>[]): string[] {
-  return Array.from(new Set(rows.map((row) => String(row.road_name ?? "Unknown road")).filter(Boolean))).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(rows.map((row) => {
+    const v = row.roadName ?? row.road_name;
+    return v != null ? String(v) : "";
+  }).filter(Boolean))).sort((left, right) => left.localeCompare(right));
 }
 
 function buildHourList(rows: Record<string, unknown>[]): number[] {
@@ -187,15 +238,28 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   const apiBase = getApiBaseUrl();
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("loading");
   const [datasetList, setDatasetList] = useState<DatasetListResponse | null>(null);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedRoad, setSelectedRoad] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("tf_selected_date") ?? "") : ""
+  );
+  const [selectedRoad, setSelectedRoad] = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("tf_selected_road") ?? "") : ""
+  );
   const [roadOptions, setRoadOptions] = useState<string[]>([]);
   const [loadingRoads, setLoadingRoads] = useState(false);
   const [rawSortKey, setRawSortKey] = useState<string>("");
   const [rawSortDirection, setRawSortDirection] = useState<SortDirection>("asc");
-  const [submittedDate, setSubmittedDate] = useState("");
-  const [submittedRoad, setSubmittedRoad] = useState("");
-  const [dataPayload, setDataPayload] = useState<DayDataResponse | null>(null);
+  const [rawFilterRoad, setRawFilterRoad] = useState<string>("");
+  const [rawFilterTimeFrom, setRawFilterTimeFrom] = useState<string>("");
+  const [rawFilterTimeTo, setRawFilterTimeTo] = useState<string>("");
+  const [submittedDate, setSubmittedDate] = useState<string>(
+    () => (_dataCache && Date.now() - _dataCache.cachedAt <= 15 * 60 * 1000 ? _dataCache.submittedDate : "")
+  );
+  const [submittedRoad, setSubmittedRoad] = useState<string>(
+    () => (_dataCache && Date.now() - _dataCache.cachedAt <= 15 * 60 * 1000 ? _dataCache.submittedRoad : "")
+  );
+  const [dataPayload, setDataPayload] = useState<DayDataResponse | null>(
+    () => (_dataCache && Date.now() - _dataCache.cachedAt <= 15 * 60 * 1000 ? _dataCache.payload : null)
+  );
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
@@ -276,7 +340,58 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     return () => {
       isCancelled = true;
     };
-  }, [apiBaseUrl, selectedDate]);
+  }, [apiBase, selectedDate]);
+
+  const autoFetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoFetchKey = useRef("");
+
+  useEffect(() => {
+    if (!selectedDate || loadingRoads) return;
+    const key = `${selectedDate}||${selectedRoad}`;
+    if (key === lastAutoFetchKey.current) return;
+
+    const cacheKey = `${submittedDate}||${submittedRoad}`;
+    if (key === cacheKey && dataPayload !== null) {
+      lastAutoFetchKey.current = key;
+      return;
+    }
+
+    if (autoFetchTimerRef.current) clearTimeout(autoFetchTimerRef.current);
+
+    const capturedDate = selectedDate;
+    const capturedRoad = selectedRoad;
+
+    autoFetchTimerRef.current = setTimeout(async () => {
+      lastAutoFetchKey.current = `${capturedDate}||${capturedRoad}`;
+      try {
+        setLoadingData(true);
+        setError(null);
+        setSubmittedDate(capturedDate);
+        const params = new URLSearchParams({ target_date: capturedDate });
+        if (capturedRoad.trim()) params.set("road_name", capturedRoad.trim());
+        const payload = await fetchJson<DayDataResponse>(
+          `${apiBase}/datasets/by-date/data?${params.toString()}`
+        );
+        setDataPayload(payload);
+        setSubmittedRoad(capturedRoad.trim());
+        _dataCache = { payload, submittedDate: capturedDate, submittedRoad: capturedRoad.trim(), cachedAt: Date.now() };
+        try {
+          localStorage.setItem("tf_selected_date", capturedDate);
+          localStorage.setItem("tf_selected_road", capturedRoad.trim());
+        } catch { /* quota exceeded */ }
+      } catch (fetchError) {
+        setDataPayload(null);
+        setSubmittedRoad("");
+        setError(fetchError instanceof Error ? fetchError.message : "Không tải được dữ liệu theo ngày");
+      } finally {
+        setLoadingData(false);
+      }
+    }, 350);
+
+    return () => {
+      if (autoFetchTimerRef.current) clearTimeout(autoFetchTimerRef.current);
+    };
+  }, [selectedDate, selectedRoad, loadingRoads, apiBase, submittedDate, submittedRoad, dataPayload]);
 
   async function handleSubmit() {
     if (!selectedDate) {
@@ -371,18 +486,38 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     return null;
   }
 
+  const filteredRawRows = useMemo<Record<string, unknown>[]>(() => {
+    let result = rows;
+    if (rawFilterRoad) {
+      const q = rawFilterRoad.toLowerCase();
+      const roadVal = (row: Record<string, unknown>) => String(row.roadName ?? row.road_name ?? "").toLowerCase();
+      result = result.filter((row) => roadVal(row).includes(q));
+    }
+    if (rawFilterTimeFrom || rawFilterTimeTo) {
+      result = result.filter((row) => {
+        const dt = String(row.recordDatetime ?? "");
+        const timePart = dt.includes(" ") ? (dt.split(" ")[1] ?? "").substring(0, 5) : dt.substring(0, 5);
+        if (!timePart) return true;
+        if (rawFilterTimeFrom && timePart < rawFilterTimeFrom) return false;
+        if (rawFilterTimeTo && timePart > rawFilterTimeTo) return false;
+        return true;
+      });
+    }
+    return result;
+  }, [rows, rawFilterRoad, rawFilterTimeFrom, rawFilterTimeTo]);
+
   const sortedRawRows = useMemo<Record<string, unknown>[]>(() => {
     if (!rawSortKey) {
-      return rows;
+      return filteredRawRows;
     }
 
-    const sorted = [...rows];
+    const sorted = [...filteredRawRows];
     sorted.sort((left, right) => {
       const compareResult = compareUnknownValues(left[rawSortKey], right[rawSortKey]);
       return rawSortDirection === "asc" ? compareResult : -compareResult;
     });
     return sorted;
-  }, [rawSortDirection, rawSortKey, rows]);
+  }, [rawSortDirection, rawSortKey, filteredRawRows]);
 
   const totalRawPages = useMemo(() => {
     return Math.max(1, Math.ceil(sortedRawRows.length / RAW_PAGE_SIZE));
@@ -400,7 +535,7 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   useEffect(() => {
     setRawPage(1);
     setRawPageInput("1");
-  }, [rawSortDirection, rawSortKey, rows]);
+  }, [rawSortDirection, rawSortKey, rows, rawFilterRoad, rawFilterTimeFrom, rawFilterTimeTo]);
 
   useEffect(() => {
     setRawPageInput(String(rawPage));
@@ -426,7 +561,7 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     const now = new Date();
     const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
     return Math.floor(minutesSinceMidnight / 3);
-  }, [isTodaySelected]);
+  }, [isTodaySelected, rows]);
 
   const rowsForAggregation = useMemo(() => {
     if (!isTodaySelected || currentBucketIndex === null) return rows;
@@ -435,6 +570,22 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
       return bucket !== null && bucket <= currentBucketIndex;
     });
   }, [rows, isTodaySelected, currentBucketIndex]);
+
+  useEffect(() => {
+    if (!isTodaySelected || !dataPayload?.target_date) return;
+    const id = setInterval(async () => {
+      try {
+        const params = new URLSearchParams({ target_date: dataPayload.target_date });
+        if (submittedRoad.trim()) params.set("road_name", submittedRoad.trim());
+        const fresh = await fetchJson<DayDataResponse>(
+          `${apiBase}/datasets/by-date/data?${params.toString()}`
+        );
+        setDataPayload(fresh);
+      } catch { /* silent */ }
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [isTodaySelected, dataPayload?.target_date, submittedRoad, apiBase]);
+
 
   const hourlyFlowSeries = useMemo<Array<number | null>>(() => {
     const BUCKETS_PER_DAY = 24 * 60 / 3; // 480
@@ -541,7 +692,7 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     const width = 960;
     const height = 320;
     const marginLeft = 70;
-    const marginRight = 24;
+    const marginRight = 60;
     const marginTop = 20;
     const marginBottom = 44;
     return {
@@ -697,6 +848,36 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     return buildLinePath(hourlyTemperaturePlot.map((point) => ({ x: point.x, y: point.yTemperature })));
   }, [hourlyTemperaturePlot]);
 
+  const hourlyWeather = useMemo<{ weather: string | null; temp: number | null }[]>(() => {
+    const slots = Array.from({ length: 24 }, () => ({ weatherCounts: new Map<string, number>(), sumTemp: 0, countTemp: 0 }));
+    for (const row of rowsForAggregation) {
+      const bucket = getHour(row);
+      if (bucket === null) continue;
+      const hourIdx = Math.min(23, Math.floor(bucket / 20));
+      const w = getWeatherLabel(row);
+      if (w) slots[hourIdx].weatherCounts.set(w.toLowerCase(), (slots[hourIdx].weatherCounts.get(w.toLowerCase()) ?? 0) + 1);
+      const t = getTemperatureValue(row);
+      if (t !== null) { slots[hourIdx].sumTemp += t; slots[hourIdx].countTemp++; }
+    }
+    return slots.map(s => {
+      let dominant: string | null = null;
+      let max = 0;
+      for (const [w, c] of s.weatherCounts.entries()) { if (c > max) { max = c; dominant = w; } }
+      return { weather: dominant, temp: s.countTemp > 0 ? s.sumTemp / s.countTemp : null };
+    });
+  }, [rowsForAggregation]);
+
+  const currentWeatherPoint = useMemo(() => {
+    const upTo = isTodaySelected && currentBucketIndex !== null
+      ? currentBucketIndex
+      : hourlyWeatherSeries.length - 1;
+    for (let i = upTo; i >= 0; i--) {
+      const entry = hourlyWeatherSeries[i];
+      if (entry && (entry.temperature !== null || entry.weather !== null)) return entry;
+    }
+    return null;
+  }, [hourlyWeatherSeries, isTodaySelected, currentBucketIndex]);
+
   const yAxisTicks = useMemo<number[]>(() => {
     const safeMax = maxHourlyFlow > 0 ? maxHourlyFlow : 1;
     return [1, 0.75, 0.5, 0.25, 0].map((ratio) => safeMax * ratio);
@@ -718,7 +899,75 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   }, [hourlyFlowPlot, hoveredHour]);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const svgRectRef = useRef<DOMRect | null>(null);
+  const rafIdRef = useRef<number | null>(null);
   const [hoveredMouse, setHoveredMouse] = useState<{ x: number; y: number } | null>(null);
+
+  const [zoomRange, setZoomRange] = useState<[number, number] | null>(null);
+  const isDraggingRef = useRef(false);
+  const [dragAnchorX, setDragAnchorX] = useState<number | null>(null);
+  const [dragCurrentX, setDragCurrentX] = useState<number | null>(null);
+
+  const xAxisTicks = useMemo(() => {
+    const BUCKETS = hourlyFlowSeries.length;
+    if (!zoomRange) {
+      return [0, 6, 12, 18, 24].map(h => {
+        const bucket = Math.min(BUCKETS - 1, Math.round(h * 60 / 3));
+        const x = chartGeometry.marginLeft + (bucket / (BUCKETS - 1)) * chartGeometry.plotWidth;
+        return { bucket, x, label: h === 24 ? "24h" : `${h}h` };
+      });
+    }
+    const [zs, ze] = zoomRange;
+    const spanMin = (ze - zs) * 3;
+    const tickMin = spanMin <= 30 ? 5 : spanMin <= 60 ? 10 : spanMin <= 120 ? 15 : spanMin <= 240 ? 30 : spanMin <= 480 ? 60 : 120;
+    const tickBuckets = tickMin / 3;
+    const ticks: { bucket: number; x: number; label: string }[] = [];
+    for (let b = Math.ceil(zs / tickBuckets) * tickBuckets; b <= ze; b += tickBuckets) {
+      const bInt = Math.round(b);
+      const min = bInt * 3;
+      const hh = Math.floor(min / 60);
+      const mm = min % 60;
+      const x = chartGeometry.marginLeft + ((bInt - zs) / (ze - zs)) * chartGeometry.plotWidth;
+      ticks.push({ bucket: bInt, x, label: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}` });
+    }
+    return ticks;
+  }, [zoomRange, chartGeometry.marginLeft, chartGeometry.plotWidth, hourlyFlowSeries.length]);
+
+  const zoomedFlowPath = useMemo(() => {
+    if (!zoomRange) return hourlyFlowPath;
+    const [zs, ze] = zoomRange;
+    const pts = hourlyFlowPlot
+      .filter(p => p.bucket >= zs && p.bucket <= ze)
+      .map(p => ({
+        x: chartGeometry.marginLeft + ((p.bucket - zs) / (ze - zs)) * chartGeometry.plotWidth,
+        y: p.y,
+      }));
+    return buildLinePath(pts);
+  }, [hourlyFlowPlot, zoomRange, chartGeometry.marginLeft, chartGeometry.plotWidth]);
+
+  const zoomedSpeedPath = useMemo(() => {
+    if (!zoomRange) return hourlySpeedPath;
+    const [zs, ze] = zoomRange;
+    const pts = hourlySpeedPlot
+      .filter(p => p.bucket >= zs && p.bucket <= ze)
+      .map(p => ({
+        x: chartGeometry.marginLeft + ((p.bucket - zs) / (ze - zs)) * chartGeometry.plotWidth,
+        y: p.ySpeed,
+      }));
+    return buildLinePath(pts);
+  }, [hourlySpeedPlot, zoomRange, chartGeometry.marginLeft, chartGeometry.plotWidth]);
+
+  const zoomedTemperaturePath = useMemo(() => {
+    if (!zoomRange) return hourlyTemperaturePath;
+    const [zs, ze] = zoomRange;
+    const pts = hourlyTemperaturePlot
+      .filter(p => p.bucket >= zs && p.bucket <= ze)
+      .map(p => ({
+        x: chartGeometry.marginLeft + ((p.bucket - zs) / (ze - zs)) * chartGeometry.plotWidth,
+        y: p.yTemperature,
+      }));
+    return buildLinePath(pts);
+  }, [hourlyTemperaturePlot, zoomRange, chartGeometry.marginLeft, chartGeometry.plotWidth]);
 
   const hasChartData =
     hourlyFlowSeries.some((value) => value !== null) ||
@@ -790,18 +1039,82 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
           ) : (
             <div className="empty-state light-empty">Chọn ngày và bấm Submit để xem chi tiết ngày.</div>
           )}
+          {dataPayload && (
+            <div className="weather-box">
+              <div className="wx-label">{isTodaySelected ? "Thời tiết hiện tại" : "Thời tiết gần nhất"}</div>
+              {currentWeatherPoint !== null ? (
+                <>
+                  <div className="wx-head">
+                    <span className="wx-icon">{getWeatherEmoji(currentWeatherPoint.weather)}</span>
+                    <div>
+                      {currentWeatherPoint.temperature !== null && (
+                        <div className="wx-temp">{formatNumber(currentWeatherPoint.temperature, 1)}°C</div>
+                      )}
+                      <div className="wx-cond">
+                        {currentWeatherPoint.weather ? getWeatherDisplayName(currentWeatherPoint.weather) : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  {(currentWeatherPoint.windSpeed !== null || currentWeatherPoint.precipitation !== null) && (
+                    <div className="wx-stats">
+                      {currentWeatherPoint.windSpeed !== null && (
+                        <div className="wx-stat">
+                          <span className="wx-stat-icon">💨</span>
+                          <span className="wx-stat-val">{formatNumber(currentWeatherPoint.windSpeed, 1)}</span>
+                          <span className="wx-stat-lbl">km/h</span>
+                        </div>
+                      )}
+                      {currentWeatherPoint.precipitation !== null && (
+                        <div className="wx-stat">
+                          <span className="wx-stat-icon">🌧</span>
+                          <span className="wx-stat-val">{formatNumber(currentWeatherPoint.precipitation, 1)}</span>
+                          <span className="wx-stat-lbl">mm</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="wx-no-data">Không có dữ liệu thời tiết cho ngày / đường này</div>
+              )}
+            </div>
+          )}
         </aside>
 
         <div className="container light-layout">
         <section className="hero light-hero">
-          <div className="hero-card light-card">
+          <div className="hero-card">
             <div className="hero-kicker light-kicker">TrafficFlow Dashboard</div>
             <h1 className="hero-title light-title">Traffic flow platform</h1>
 
             <div className="hero-stats light-stats">
               <div className="metric-card light-metric">
+                <div className="metric-label">Bản ghi</div>
+                <div className={`metric-value${loadingData ? " skeleton" : ""}`}>
+                  {loadingData ? "     " : formatNumber(metrics.records)}
+                </div>
+                <div className="metric-sub">bản ghi trong ngày</div>
+              </div>
+              <div className="metric-card light-metric">
+                <div className="metric-label">Đường</div>
+                <div className={`metric-value${loadingData ? " skeleton" : ""}`}>
+                  {loadingData ? "     " : formatNumber(metrics.roads)}
+                </div>
+                <div className="metric-sub">đường khả dụng</div>
+              </div>
+              <div className="metric-card light-metric">
+                <div className="metric-label">Khung giờ</div>
+                <div className={`metric-value${loadingData ? " skeleton" : ""}`}>
+                  {loadingData ? "     " : formatNumber(metrics.hours)}
+                </div>
+                <div className="metric-sub">khung 3-phút</div>
+              </div>
+              <div className="metric-card light-metric">
                 <div className="metric-label">Ngày dữ liệu mới nhất</div>
-                <div className="metric-value">{formatLatestDate(latestRecordDateTime)}</div>
+                <div className={`metric-value${loadingData ? " skeleton" : ""}`}>
+                  {loadingData ? "     " : formatLatestDate(latestRecordDateTime)}
+                </div>
+                <div className="metric-sub">bản ghi gần nhất</div>
               </div>
             </div>
           </div>
@@ -897,11 +1210,27 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
         
 
         <section className="table-card light-card">
-          <h2 className="section-title light-section-title">lưu lượng trong ngày</h2>
+          <div className="flow-chart-header">
+            <span className="flow-chart-title">Lưu lượng theo thời gian</span>
+            {hasChartData && (
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                {showFlowSeries && <div className="legend-item"><span className="legend-swatch flow" /> Lưu lượng</div>}
+                {showSpeedSeries && <div className="legend-item"><span className="legend-swatch speed" /> Tốc độ TB</div>}
+                {showTemperatureSeries && <div className="legend-item"><span className="legend-swatch temperature" /> Nhiệt độ</div>}
+              </div>
+            )}
+          </div>
           {hasChartData ? (
             <div className="flow-chart-wrap">
               <div className="flow-chart-meta">
-                <span>{isTodaySelected ? "Từ 00:00 đến hiện tại" : "Từ 00:00 đến 24:00"}</span>
+                <div className="chart-time-row">
+                  <span>{isTodaySelected ? "Từ 00:00 đến hiện tại" : "Từ 00:00 đến 24:00"}</span>
+                  {zoomRange && (
+                    <button type="button" className="chart-reset-zoom" onClick={() => setZoomRange(null)}>
+                      ✕ Reset zoom
+                    </button>
+                  )}
+                </div>
                 <div className="chart-series-filter" aria-label="Chọn dữ liệu hiển thị trên biểu đồ">
                   <label>
                     <input
@@ -935,38 +1264,69 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                   viewBox={`0 0 ${chartGeometry.width} ${chartGeometry.height}`}
                   role="img"
                   aria-label="Biểu đồ lưu lượng ActualFlow theo khung 3 phút"
+                  style={{ cursor: "crosshair", userSelect: "none" } as React.CSSProperties}
+                  onMouseEnter={(e) => {
+                    svgRectRef.current = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+                  }}
+                  onMouseDown={(e) => {
+                    const rect = svgRectRef.current ?? (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+                    svgRectRef.current = rect;
+                    const scaleX = chartGeometry.width / rect.width;
+                    const svgX = (e.clientX - rect.left) * scaleX;
+                    if (svgX >= chartGeometry.marginLeft && svgX <= chartGeometry.width - chartGeometry.marginRight) {
+                      isDraggingRef.current = true;
+                      setDragAnchorX(svgX);
+                      setDragCurrentX(svgX);
+                    }
+                  }}
                   onMouseMove={(e) => {
-                    const svg = e.currentTarget as SVGSVGElement;
-                    const rect = svg.getBoundingClientRect();
-                    // convert client coords to SVG (viewBox) coordinates
-                    const pt = svg.createSVGPoint();
-                    pt.x = e.clientX;
-                    pt.y = e.clientY;
-                    const ctm = svg.getScreenCTM();
-                    let svgX = null as number | null;
-                    let svgY = null as number | null;
-                    if (ctm) {
-                      const svgP = pt.matrixTransform(ctm.inverse());
-                      svgX = svgP.x;
-                      svgY = svgP.y;
+                    const rect = svgRectRef.current;
+                    if (!rect) return;
+                    const scaleX = chartGeometry.width / rect.width;
+                    const svgX = (e.clientX - rect.left) * scaleX;
+                    if (isDraggingRef.current) {
+                      const clamped = Math.max(chartGeometry.marginLeft, Math.min(chartGeometry.width - chartGeometry.marginRight, svgX));
+                      setDragCurrentX(clamped);
+                      setHoveredHour(null);
+                      setHoveredMouse(null);
+                    } else {
+                      const clientX = e.clientX;
+                      const clientY = e.clientY;
+                      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+                      rafIdRef.current = requestAnimationFrame(() => {
+                        rafIdRef.current = null;
+                        const ratio = (svgX - chartGeometry.marginLeft) / chartGeometry.plotWidth;
+                        const [zs, ze] = zoomRange ?? [0, hourlyFlowSeries.length - 1];
+                        const bucket = Math.round(zs + Math.max(0, Math.min(1, ratio)) * (ze - zs));
+                        setHoveredHour(bucket);
+                        setHoveredMouse({ x: clientX - rect.left, y: clientY - rect.top });
+                      });
                     }
-
-                    const BUCKETS_PER_DAY = hourlyFlowSeries.length;
-                    if (svgX === null) {
-                      return;
+                  }}
+                  onMouseUp={() => {
+                    if (isDraggingRef.current && dragAnchorX !== null && dragCurrentX !== null) {
+                      isDraggingRef.current = false;
+                      const BUCKETS = hourlyFlowSeries.length;
+                      const [zs, ze] = zoomRange ?? [0, BUCKETS - 1];
+                      const toBucket = (svgX: number) => {
+                        const r = (svgX - chartGeometry.marginLeft) / chartGeometry.plotWidth;
+                        return Math.round(zs + Math.max(0, Math.min(1, r)) * (ze - zs));
+                      };
+                      const b1 = toBucket(dragAnchorX);
+                      const b2 = toBucket(dragCurrentX);
+                      const [newZs, newZe] = [Math.min(b1, b2), Math.max(b1, b2)];
+                      if (newZe - newZs >= 4) setZoomRange([newZs, newZe]);
+                      setDragAnchorX(null);
+                      setDragCurrentX(null);
                     }
-
-                    const ratio = (svgX - chartGeometry.marginLeft) / chartGeometry.plotWidth;
-                    const clamped = Math.max(0, Math.min(1, ratio));
-                    const bucket = Math.round(clamped * (BUCKETS_PER_DAY - 1));
-                    setHoveredHour(bucket);
-
-                    // hoveredMouse uses pixel coordinates relative to the chart container
-                    const px = e.clientX - rect.left;
-                    const py = e.clientY - rect.top;
-                    setHoveredMouse({ x: px, y: py });
                   }}
                   onMouseLeave={() => {
+                    if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
+                    if (isDraggingRef.current) {
+                      isDraggingRef.current = false;
+                      setDragAnchorX(null);
+                      setDragCurrentX(null);
+                    }
                     setHoveredHour(null);
                     setHoveredMouse(null);
                   }}
@@ -983,61 +1343,40 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                           y2={y}
                         />
                         <text className="flow-axis-label" x={chartGeometry.marginLeft - 10} y={y + 4} textAnchor="end">
-                          {formatNumber(Math.round(tickValue))}
+                          {formatAxisValue(tickValue)}
                         </text>
                       </g>
                     );
                   })}
-                  <line
-                    className="flow-axis-line"
-                    x1={chartGeometry.marginLeft}
-                    y1={chartGeometry.marginTop}
-                    x2={chartGeometry.marginLeft}
-                    y2={chartGeometry.height - chartGeometry.marginBottom}
-                  />
-                  <line
-                    className="flow-axis-line"
-                    x1={chartGeometry.marginLeft}
-                    y1={chartGeometry.height - chartGeometry.marginBottom}
-                    x2={chartGeometry.width - chartGeometry.marginRight}
-                    y2={chartGeometry.height - chartGeometry.marginBottom}
-                  />
-                  {([0, 6, 12, 18, 24] as number[]).map((hourMark) => {
-                    const BUCKETS_PER_DAY = hourlyFlowSeries.length;
-                    const rawIndex = Math.round((hourMark * 60) / 3);
-                    const bucketIndex = Math.min(BUCKETS_PER_DAY - 1, rawIndex);
-                    const x = chartGeometry.marginLeft + (bucketIndex / (BUCKETS_PER_DAY - 1)) * chartGeometry.plotWidth;
-                    const label = hourMark === 24 ? "24h" : `${hourMark}h`;
-                    return (
-                      <text
-                        key={`x-tick-${hourMark}`}
-                        className="flow-axis-label"
-                        x={x}
-                        y={chartGeometry.height - 12}
-                        textAnchor={hourMark === 0 ? "start" : hourMark === 24 ? "end" : "middle"}
-                      >
-                        {label}
-                      </text>
-                    );
-                  })}
+                  <line className="flow-axis-line" x1={chartGeometry.marginLeft} y1={chartGeometry.marginTop} x2={chartGeometry.marginLeft} y2={chartGeometry.height - chartGeometry.marginBottom} />
+                  <line className="flow-axis-line" x1={chartGeometry.marginLeft} y1={chartGeometry.height - chartGeometry.marginBottom} x2={chartGeometry.width - chartGeometry.marginRight} y2={chartGeometry.height - chartGeometry.marginBottom} />
+                  {xAxisTicks.map(({ x, label, bucket }) => (
+                    <text
+                      key={`x-tick-${bucket}`}
+                      className="flow-axis-label"
+                      x={x}
+                      y={chartGeometry.height - 12}
+                      textAnchor={x <= chartGeometry.marginLeft + 2 ? "start" : x >= chartGeometry.width - chartGeometry.marginRight - 2 ? "end" : "middle"}
+                    >
+                      {label}
+                    </text>
+                  ))}
                   {showFlowSeries ? (
                     <>
                       <text className="flow-axis-title" x={18} y={chartGeometry.marginTop + chartGeometry.plotHeight / 2} transform={`rotate(-90 18 ${chartGeometry.marginTop + chartGeometry.plotHeight / 2})`}>
                         Flow (xe/3 phút)
                       </text>
-                      <path className="flow-chart-line" d={hourlyFlowPath} />
+                      <path className="flow-chart-line" d={zoomedFlowPath} />
                     </>
                   ) : null}
-                  {showSpeedSeries ? <path className="speed-chart-line" d={hourlySpeedPath} /> : null}
-                  {showTemperatureSeries ? <path className="temperature-chart-line" d={hourlyTemperaturePath} /> : null}
-                  {/* Right-side secondary axis for speed and temperature. */}
+                  {showSpeedSeries ? <path className="speed-chart-line" d={zoomedSpeedPath} /> : null}
+                  {showTemperatureSeries ? <path className="temperature-chart-line" d={zoomedTemperaturePath} /> : null}
                   {showSpeedSeries || showTemperatureSeries ? [1, 0.75, 0.5, 0.25, 0].map((ratio, index) => {
                     const y = chartGeometry.marginTop + (index / 4) * chartGeometry.plotHeight;
-                    const label = Math.round(secondaryAxisMax * ratio);
                     return (
                       <g key={`y2-tick-${index}`}>
                         <text className="flow-axis-label" x={chartGeometry.width - chartGeometry.marginRight + 10} y={y + 4} textAnchor="start">
-                          {label}
+                          {Math.round(secondaryAxisMax * ratio)}
                         </text>
                       </g>
                     );
@@ -1046,6 +1385,15 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                     <text className="flow-axis-label" x={chartGeometry.width - chartGeometry.marginRight + 10} y={chartGeometry.marginTop - 6} textAnchor="start">
                       {showSpeedSeries && showTemperatureSeries ? "km/h / °C" : showSpeedSeries ? "km/h" : "°C"}
                     </text>
+                  ) : null}
+                  {dragAnchorX !== null && dragCurrentX !== null ? (
+                    <rect
+                      className="zoom-drag-rect"
+                      x={Math.min(dragAnchorX, dragCurrentX)}
+                      y={chartGeometry.marginTop}
+                      width={Math.abs(dragCurrentX - dragAnchorX)}
+                      height={chartGeometry.plotHeight}
+                    />
                   ) : null}
                 </svg>
                 {hoveredPoint && hoveredMouse ? (
@@ -1086,11 +1434,17 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                   </div>
                 ) : null}
               </div>
-              <div className="chart-legend">
-                {showFlowSeries ? <div className="legend-item"><span className="legend-swatch flow" /> Lưu lượng (xe/3ph)</div> : null}
-                {showSpeedSeries ? <div className="legend-item"><span className="legend-swatch speed" /> Tốc độ TB (km/h)</div> : null}
-                {showTemperatureSeries ? <div className="legend-item"><span className="legend-swatch temperature" /> Nhiệt độ (°C)</div> : null}
-              </div>
+              {hourlyWeather.some(h => h.weather !== null) && (
+                <div className="flow-weather-row">
+                  {hourlyWeather.map((h, i) => (
+                    <div key={i} className="flow-weather-hour" title={h.weather ?? ""}>
+                      <span className="fwh-emoji">{getWeatherEmoji(h.weather)}</span>
+                      {h.temp !== null && <span className="fwh-temp">{formatNumber(h.temp, 0)}°</span>}
+                      <span className="fwh-label">{String(i).padStart(2, "0")}h</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="empty-state light-empty">Không có dữ liệu ActualFlow để vẽ biểu đồ cho ngày/đường đã chọn.</div>
@@ -1099,6 +1453,55 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
 
         <section className="table-card light-card">
           <h2 className="section-title light-section-title">Dữ liệu thô</h2>
+
+          {rows.length > 0 && (
+            <div className="raw-filter-bar">
+              <div className="raw-filter-group">
+                <label className="raw-filter-label">Đường</label>
+                <select
+                  className="raw-filter-select"
+                  value={rawFilterRoad}
+                  onChange={(e) => setRawFilterRoad(e.target.value)}
+                >
+                  <option value="">Tất cả</option>
+                  {roadNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="raw-filter-group">
+                <label className="raw-filter-label">Từ giờ</label>
+                <input
+                  type="time"
+                  className="raw-filter-time"
+                  value={rawFilterTimeFrom}
+                  onChange={(e) => setRawFilterTimeFrom(e.target.value)}
+                />
+              </div>
+              <div className="raw-filter-group">
+                <label className="raw-filter-label">Đến giờ</label>
+                <input
+                  type="time"
+                  className="raw-filter-time"
+                  value={rawFilterTimeTo}
+                  onChange={(e) => setRawFilterTimeTo(e.target.value)}
+                />
+              </div>
+              {(rawFilterRoad || rawFilterTimeFrom || rawFilterTimeTo) && (
+                <button
+                  type="button"
+                  className="ghost-button light-button raw-filter-clear"
+                  onClick={() => { setRawFilterRoad(""); setRawFilterTimeFrom(""); setRawFilterTimeTo(""); }}
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
+              <span className="raw-filter-count">
+                {formatNumber(filteredRawRows.length)} / {formatNumber(rows.length)} dòng
+              </span>
+            </div>
+          )}
+
           <div className="date-hint" style={{ marginBottom: "12px" }}>
             Bảng này đang hiển thị {formatNumber(rawPageRows.length)} dòng trên trang {formatNumber(rawPage)} / {formatNumber(totalRawPages)}.
           </div>

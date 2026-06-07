@@ -278,7 +278,9 @@ export default function VisualizationPage() {
   const [mapGeometry, setMapGeometry] = useState<MapGeometryResponse | null>(null);
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>("historical");
   const [dates, setDates] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("tf_selected_date") ?? "") : ""
+  );
   const [loadedDate, setLoadedDate] = useState("");
   const [payload, setPayload] = useState<LatestLayerDataResponse | null>(null);
   const [mapState, setMapState] = useState<LoadState>("loading");
@@ -341,9 +343,11 @@ export default function VisualizationPage() {
         setDates(datePayload.dates);
 
         const latestDate = datePayload.dates[datePayload.dates.length - 1] ?? "";
-        setSelectedDate(latestDate);
-        if (latestDate) {
-          await loadDateData(latestDate);
+        const storedDate = typeof window !== "undefined" ? (localStorage.getItem("tf_selected_date") ?? "") : "";
+        const initialDate = (storedDate && datePayload.dates.includes(storedDate)) ? storedDate : latestDate;
+        setSelectedDate(initialDate);
+        if (initialDate) {
+          await loadDateData(initialDate);
         } else {
           setDataState("ready");
         }
