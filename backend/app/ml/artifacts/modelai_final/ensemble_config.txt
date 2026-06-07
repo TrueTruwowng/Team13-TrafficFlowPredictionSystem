@@ -1,0 +1,3 @@
+ModelAI_Final (April + May Data)
+w_lgb: 0.88
+w_stgcn: 0.12
