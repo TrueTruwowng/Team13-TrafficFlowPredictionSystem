@@ -356,7 +356,7 @@ def main() -> None:
 
     # ── 3. Dashboard backend (FastAPI, port 8001) ────────────────────────────
     logger.info("=== 3/5: dashboard backend (port 8001) ===")
-    BACKEND_DIR = os.path.join(PROJECT_DIR, "dashboard", "dashboard_Trafficflow", "backend")
+    BACKEND_DIR = os.path.join(PROJECT_DIR, "dashboard", "backend")
     MYENV_UVICORN = "/home/dis/myenv/bin/uvicorn"
     s_backend = ProcSpec("backend",
                          ["bash", "-c",
@@ -367,9 +367,10 @@ def main() -> None:
 
     # ── 4. Dashboard UI (Next.js, port 3000) ─────────────────────────────────
     logger.info("=== 4/5: dashboard UI (port 3000) ===")
-    UI_DIR = os.path.join(PROJECT_DIR, "dashboard", "dashboard_Trafficflow", "frontend")
+    UI_DIR = os.path.join(PROJECT_DIR, "dashboard", "frontend")
+    NPM_BIN = "/home/TrueTruwowng/.nvm/versions/node/v25.9.0/bin/npm"
     s_ui = ProcSpec("ui",
-                    ["bash", "-c", f"fuser -k 3000/tcp 2>/dev/null; sleep 0.5 && cd {UI_DIR!r} && npm start"])
+                    ["bash", "-c", f"fuser -k 3000/tcp 2>/dev/null; sleep 0.5 && cd {UI_DIR!r} && {NPM_BIN} start"])
     _all_specs.append(s_ui)
     _start_supervised(s_ui)
 

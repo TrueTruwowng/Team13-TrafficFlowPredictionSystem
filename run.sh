@@ -10,10 +10,8 @@ fi
 # --- 2. CẤU HÌNH ĐƯỜNG DẪN ---
 KAFKA_PATH="/opt/kafka"
 SPARK_PATH="/opt/spark"
-AIRFLOW_HOME="$HOME/airflow"
-DOCKER_COMPOSE_PATH="/home/dis/Project" 
-PYTHON_ENV="/home/dis/myenv/bin/python3" 
-AIRFLOW_BIN="/home/dis/myenv/bin/airflow"
+DOCKER_COMPOSE_PATH="/home/dis/Project"
+PYTHON_ENV="/home/dis/myenv/bin/python3"
 
 # --- 3. KIỂM TRA KAFKA_CLUSTER_ID ---
 # Nếu biến KAFKA_CLUSTER_ID chưa được set trong .env hoặc bashrc, script sẽ báo lỗi
@@ -81,22 +79,15 @@ echo "   -> Spark 3.5.1: Master & Workers started"
 
 # --- 7. KHỞI CHẠY DASHBOARD ---
 echo "3. Starting Dashboard Backend (port 8000)..."
-BACKEND_DIR="/home/dis/Project/dashboard/dashboard_Trafficflow/backend"
+BACKEND_DIR="/home/dis/Project/dashboard/backend"
 nohup bash -c "cd '$BACKEND_DIR' && $PYTHON_ENV -m uvicorn app.main:app --host 0.0.0.0 --port 8001" > /tmp/backend.log 2>&1 &
 echo "   -> Dashboard Backend: started (log: /tmp/backend.log)"
 
 echo "   Starting Dashboard UI (port 3000)..."
-UI_DIR="/home/dis/Project/dashboard/dashboard_Trafficflow/frontend"
-nohup bash -c "cd '$UI_DIR' && npm start" > /tmp/ui_dashboard.log 2>&1 &
+UI_DIR="/home/dis/Project/dashboard/frontend"
+NPM_BIN="/home/TrueTruwowng/.nvm/versions/node/v25.9.0/bin/npm"
+nohup bash -c "cd '$UI_DIR' && $NPM_BIN start" > /tmp/ui_dashboard.log 2>&1 &
 echo "   -> Dashboard UI: started (log: /tmp/ui_dashboard.log)"
-
-# --- 8. KHỞI CHẠY AIRFLOW ---
-echo "4. Starting Airflow..."
-export AIRFLOW_HOME=$AIRFLOW_HOME
-rm -f $AIRFLOW_HOME/*.pid
-$AIRFLOW_BIN webserver -p 8082 -D
-$AIRFLOW_BIN scheduler -D
-echo "   -> Airflow: Webserver & Scheduler started"
 
 echo "=================================================="
 echo "✅ ALL SERVICES DEPLOYED SUCCESSFULLY!"
@@ -111,7 +102,6 @@ echo "--------------------------------------------------"
 echo "🔗 ACCESSIBLE INTERFACES:"
 echo "--------------------------------------------------"
 echo "⭐ Spark Master: http://$EXT_IP:8080"
-echo "⭐ Airflow UI:   http://$EXT_IP:8082"
 echo "⭐ Kafka UI:     http://$EXT_IP:8085"
 echo "⭐ Dashboard UI: http://$EXT_IP:3000"
 echo "⭐ Grafana:      http://$EXT_IP:3001"
