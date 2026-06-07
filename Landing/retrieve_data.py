@@ -22,7 +22,9 @@ BUCKET_NAME       = os.getenv("GCS_BUCKET_NAME")
 LOOKUP_PATH       = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "road_lookup_table.csv")
 LANDING_PREFIX    = "landing/weather"
 TOPIC             = KAFKA_TOPICS["weather"]
-INTERVAL_MINUTES = 3
+WRITE_INTERVAL_MINUTES = 3
+FETCH_INTERVAL_MINUTES = 60
+INTERVAL_MINUTES       = WRITE_INTERVAL_MINUTES
 
 if not BOOTSTRAP_SERVERS or not BUCKET_NAME:
     logger.critical("Thieu KAFKA_BOOTSTRAP_SERVERS hoac GCS_BUCKET_NAME!")
@@ -42,8 +44,10 @@ def _load_roads() -> list[dict]:
 
 
 def _fetch_and_send(broker: KafkaBroker, api: WeatherAPI, roads: list[dict],
-                    date_str: str, begin: str, end: str, hhmm: str):
-    """Fetch weather tat ca duong -> Kafka -> consumer luu GCS."""
+                    date_str: str, begin: str, end: str, hhmm: str,
+                    weather_cache: dict | None = None) -> dict:
+    """Fetch weather (hoac reuse cache) -> Kafka -> consumer luu GCS.
+    Tra ve dict road_name->raw_payload khi live fetch, dict rong khi dung cache."""
     landing_path = f"{LANDING_PREFIX}/{date_str}/{date_str}_{hhmm}.json"
 
     ready_event = threading.Event()
@@ -62,12 +66,19 @@ def _fetch_and_send(broker: KafkaBroker, api: WeatherAPI, roads: list[dict],
     consumer_thread.start()
     ready_event.wait(timeout=10)
 
+    new_cache: dict = {}
     sent = 0
     for road in roads:
-        data = api.get_weather(road["lat"], road["lon"])
-        if not data:
-            logger.warning(f"Khong lay duoc weather: {road['name']}")
-            continue
+        if weather_cache and road["name"] in weather_cache:
+            data = dict(weather_cache[road["name"]])
+            data["ingestion_time"] = datetime.now().isoformat()
+        else:
+            data = api.get_weather(road["lat"], road["lon"])
+            if not data:
+                logger.warning(f"Khong lay duoc weather: {road['name']}")
+                continue
+            new_cache[road["name"]] = dict(data)
+
         data["road_id"] = road["id"]
         data["date"]    = date_str
         data["begin"]   = begin
@@ -78,6 +89,7 @@ def _fetch_and_send(broker: KafkaBroker, api: WeatherAPI, roads: list[dict],
     broker.flush()
     consumer_thread.join(timeout=60)
     logger.info(f"[{date_str} {hhmm}] {sent}/{len(roads)} roads -> {landing_path}")
+    return new_cache
 
 
 def _min_to_hhmm(total_min: int) -> str:
@@ -118,18 +130,30 @@ def run(target_date: str = None):
         f"{_min_to_hhmm(first_end_min)}: {len(schedule)} intervals con lai"
     )
 
+    _cached_weather: dict = {}
+    _last_fetch_min: int  = -1
+
     for send_time, end_min in schedule:
         wait_sec = (send_time - datetime.now()).total_seconds()
         if wait_sec > 0:
             logger.debug(f"Cho {wait_sec:.0f}s den {send_time.strftime('%H:%M')}...")
             time.sleep(wait_sec)
 
-        begin_min = end_min - INTERVAL_MINUTES
+        begin_min  = end_min - WRITE_INTERVAL_MINUTES
         begin_hhmm = _min_to_hhmm(begin_min)
         end_hhmm   = _min_to_hhmm(end_min)
         hhmm       = f"{(end_min // 60):02d}{(end_min % 60):02d}"
 
-        _fetch_and_send(broker, api, roads, target_date, begin_hhmm, end_hhmm, hhmm)
+        is_fetch_interval = (end_min % FETCH_INTERVAL_MINUTES == 0)
+        use_cache = bool(_cached_weather) and not is_fetch_interval
+
+        result = _fetch_and_send(
+            broker, api, roads, target_date, begin_hhmm, end_hhmm, hhmm,
+            weather_cache=_cached_weather if use_cache else None,
+        )
+        if result:
+            _cached_weather = result
+            _last_fetch_min = end_min
 
     broker.close()
     logger.info(f"Weather retrieve {target_date} hoan tat.")

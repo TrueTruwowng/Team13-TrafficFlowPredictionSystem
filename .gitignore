@@ -9,6 +9,7 @@
 logs/
 *.log
 .env
+.claude
 
 # Python / FastAPI
 **/__pycache__/

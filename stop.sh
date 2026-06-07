@@ -40,7 +40,7 @@ do
     echo "   -> Kafka @ $node: STOPPED"
 done
 
-# 4. Dừng Docker (Kafka UI)
+# 4. Dừng Docker (Kafka UI, Kafka Exporter, Prometheus, Grafana)
 echo "4. Dừng Docker Containers..."
 if [ -d "$DOCKER_COMPOSE_PATH" ]; then
     cd "$DOCKER_COMPOSE_PATH"

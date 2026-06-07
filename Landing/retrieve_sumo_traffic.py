@@ -127,8 +127,44 @@ def _process_file(xml_path: str, date_str: str,
     return total_intervals > 0
 
 
-def retrieve_sumo_traffic():
-    """Chạy 1 lần rồi thoát — Airflow lo schedule."""
+def _select_date_range(blobs: list, start_date: str | None, end_date: str | None) -> list:
+    """Lọc blobs theo khoảng ngày [start_date, end_date] (YYYY-MM-DD, bao gồm 2 đầu).
+    None ở đầu nào thì không giới hạn đầu đó."""
+    def _parse_bound(d: str, name: str):
+        try:
+            return datetime.strptime(d, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError(f"{name} phải theo định dạng YYYY-MM-DD, nhận được: {d!r}")
+
+    lo = _parse_bound(start_date, "start_date") if start_date else None
+    hi = _parse_bound(end_date,   "end_date")   if end_date   else None
+    if lo is None and hi is None:
+        return blobs
+
+    out = []
+    for b in blobs:
+        d = datetime.strptime(
+            _parse_date_from_filename(os.path.basename(b.name)), "%Y-%m-%d"
+        ).date()
+        if lo is not None and d < lo:
+            continue
+        if hi is not None and d > hi:
+            continue
+        out.append(b)
+    return out
+
+
+def retrieve_sumo_traffic(start_date: str | None = None, end_date: str | None = None,
+                          overwrite: bool = False):
+    """Chạy 1 lần rồi thoát — Airflow lo schedule.
+
+    Args:
+        start_date: Ngày bắt đầu chia khoảng (YYYY-MM-DD). Bỏ qua các file trước ngày này.
+                    None = không giới hạn đầu dưới.
+        end_date:   Ngày kết thúc (YYYY-MM-DD, bao gồm). Bỏ qua các file sau ngày này.
+                    None = không giới hạn đầu trên.
+        overwrite:  True = xử lý lại và ghi đè ngay cả khi file đã có trong checkpoint.
+    """
     import tempfile
     dest_bucket, src_bucket = _get_buckets()
     processed = _read_checkpoint(dest_bucket)
@@ -137,9 +173,11 @@ def retrieve_sumo_traffic():
         b for b in src_bucket.list_blobs(prefix=SOURCE_PREFIX)
         if b.name.endswith("_output.xml")
     ]
+    blobs = _select_date_range(blobs, start_date, end_date)
     pending = sorted(
+        blobs if overwrite else
         [b for b in blobs if _parse_date_from_filename(os.path.basename(b.name)) not in processed],
-        key=lambda b: b.name,
+        key=lambda b: _parse_date_from_filename(os.path.basename(b.name)),
     )
 
     if not pending:
@@ -168,4 +206,24 @@ def retrieve_sumo_traffic():
 
 
 if __name__ == "__main__":
-    retrieve_sumo_traffic()
+    import argparse
+    parser = argparse.ArgumentParser(description="Retrieve SUMO traffic data và đẩy lên GCS.")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Chỉ xử lý các file từ ngày này trở đi (bỏ qua các file trước đó).",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Chỉ xử lý các file đến ngày này (bao gồm). Bỏ qua các file sau đó.",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Ghi đè file đã xử lý trước đó (bỏ qua checkpoint).",
+    )
+    args = parser.parse_args()
+    retrieve_sumo_traffic(start_date=args.start_date, end_date=args.end_date, overwrite=args.overwrite)

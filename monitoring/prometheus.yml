@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  # main.py orchestrator — process health metrics
+  - job_name: pipeline
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+        labels:
+          env: production
+
+  # kafka-exporter — consumer lag, throughput
+  - job_name: kafka
+    static_configs:
+      - targets: ["10.148.0.2:9308"]
+        labels:
+          env: production
+
+  # node-exporter — CPU, RAM, disk, network của máy chủ
+  - job_name: node
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+        labels:
+          env: production
+
+  # Spark UI Prometheus endpoint — streaming metrics
+  - job_name: spark
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["master14:4040"]
+        labels:
+          env: production
+    # Spark UI chỉ available khi job đang chạy
+    honor_labels: true
+
+  - job_name: 'spark-executors'
+    metrics_path: '/metrics/executors/prometheus/'
+    static_configs:
+      - targets: ['master14:4040']

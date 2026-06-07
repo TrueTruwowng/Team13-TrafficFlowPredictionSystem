@@ -1,10 +1,12 @@
 version: '3.8'
+
 services:
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - "8085:8080" # Map port 8085 ngoài máy thật vào 8080 của container
+      - "8085:8080"
     environment:
       - KAFKA_CLUSTERS_0_NAME=UET-BigData-Cluster
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=master14:9092
@@ -14,3 +16,66 @@ services:
       - "worker142:10.148.0.4"
     restart: always
 
+<<<<<<< HEAD
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    container_name: kafka-exporter
+    ports:
+      - "9308:9308"
+    command:
+      - "--kafka.server=10.148.0.2:9092"
+      - "--kafka.version=2.8.0"
+    extra_hosts:
+      - "master14:10.148.0.2"
+      - "worker141:10.148.0.3"
+      - "worker142:10.148.0.4"
+    restart: unless-stopped
+ 
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "master14:10.148.0.2"
+    depends_on:
+      - kafka-exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+=======
+>>>>>>> origin/main

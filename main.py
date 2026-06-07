@@ -58,6 +58,10 @@ def _run_pipeline(target_date: str | None) -> None:
     import Gold.gold_processing as gold
 
     spark = get_spark("Pipeline")
+    # Race khi gold doc silver luc silver MERGE rewrite/xoa file -> SparkFileNotFoundException
+    # lam crash ca pipeline. Bo qua file da biet mat thay vi crash. Chi dat trong pipeline mode
+    # (streaming song song) — KHONG dat global de backfill van fail to neu gap file mat that.
+    spark.conf.set("spark.sql.files.ignoreMissingFiles", "true")
 
     def _wait(path, label, delay=30):
         while True:
@@ -96,6 +100,18 @@ def _run_pipeline(target_date: str | None) -> None:
 
 from loguru import logger
 from config import KAFKA_TOPICS
+
+# Chỉ import metrics khi chạy ở orchestrator mode — không import khi spark-submit --pipeline
+# vì prometheus_client có thể chưa có trong Python env của Spark driver
+if "--pipeline" not in sys.argv:
+    from utils.metrics import (
+        start_metrics_server,
+        process_up,
+        restart_total,
+        fast_crash_total,
+        process_uptime_seconds,
+        init_process_metrics
+	)
 
 _shutting_down = False
 _log_fh        = None
@@ -184,9 +200,17 @@ def _stream_log(proc: subprocess.Popen, label: str) -> None:
 _all_specs: list[ProcSpec] = []
 
 
+def _uptime_tracker(spec: ProcSpec, started_at: float, stop_event: threading.Event) -> None:
+    while not stop_event.is_set():
+        process_uptime_seconds.labels(process=spec.label).set(time.monotonic() - started_at)
+        time.sleep(5)
+
+
 def _supervise(spec: ProcSpec) -> None:
+    process_up.labels(process=spec.label).set(0)
     while not _shutting_down:
-        started_at = time.monotonic()
+        started_at  = time.monotonic()
+        stop_uptime = threading.Event()
         try:
             proc = subprocess.Popen(
                 spec.cmd + spec.date_args,
@@ -204,8 +228,18 @@ def _supervise(spec: ProcSpec) -> None:
         _stream_log(proc, spec.label)
         logger.info(f"[{spec.label}] Started pid={proc.pid}")
 
+        process_up.labels(process=spec.label).set(1)
+        process_uptime_seconds.labels(process=spec.label).set(0)
+        threading.Thread(
+            target=_uptime_tracker, args=(spec, started_at, stop_uptime), daemon=True
+        ).start()
+
         ret    = proc.wait()
         uptime = time.monotonic() - started_at
+        stop_uptime.set()
+
+        process_up.labels(process=spec.label).set(0)
+
         if _shutting_down:
             return
 
@@ -213,6 +247,7 @@ def _supervise(spec: ProcSpec) -> None:
 
         if uptime < MIN_UPTIME_SEC:
             spec.fast_crash_count += 1
+            fast_crash_total.labels(process=spec.label).inc()
             if spec.fast_crash_count >= MAX_FAST_CRASHES:
                 logger.critical(f"[{spec.label}] {spec.fast_crash_count} fast crashes — giving up.")
                 return
@@ -222,6 +257,8 @@ def _supervise(spec: ProcSpec) -> None:
             spec.fast_crash_count = 0
             delay = BASE_RESTART_SEC
             logger.info(f"[{spec.label}] Restarting in {delay}s…")
+
+        restart_total.labels(process=spec.label).inc()
         time.sleep(delay)
 
 
@@ -249,6 +286,38 @@ def _shutdown(signum=None, frame=None) -> None:
     logger.info("All processes stopped.")
     sys.exit(0)
 
+def _kafka_health_checker() -> None:
+    """Luồng chạy ngầm liên tục kiểm tra Kafka, cập nhật trạng thái và Uptime"""
+    from kafka.admin import KafkaAdminClient
+    global _shutting_down
+    logger.info("[kafka_checker] Started health check thread for Kafka Cluster.")
+    
+    kafka_started_at = None  # Biến ghi nhận thời điểm Kafka bắt đầu sống
+    
+    while not _shutting_down:
+        try:
+            # Thử kết nối nhanh tới Kafka
+            admin = KafkaAdminClient(bootstrap_servers=KAFKA_BOOTSTRAP, request_timeout_ms=2000)
+            admin.list_topics()
+            admin.close()
+            
+            # 1. Cập nhật trạng thái UP (1)
+            process_up.labels(process="kafka").set(1)
+            
+            # 2. Tính toán và cập nhật Uptime
+            if kafka_started_at is None:
+                kafka_started_at = time.monotonic()  # Đánh dấu mốc thời gian bắt đầu UP
+            
+            uptime_sec = time.monotonic() - kafka_started_at
+            process_uptime_seconds.labels(process="kafka").set(uptime_sec)
+            
+        except Exception:
+            # Nếu lỗi (Kafka sập hoặc chưa bật)
+            process_up.labels(process="kafka").set(0)
+            process_uptime_seconds.labels(process="kafka").set(0)
+            kafka_started_at = None  # Reset lại mốc thời gian khi sập
+            
+        time.sleep(15)  # Kiểm tra định kỳ mỗi 15 giây
 
 def main() -> None:
     target_date = sys.argv[1] if len(sys.argv) > 1 else None
@@ -259,10 +328,18 @@ def main() -> None:
     signal.signal(signal.SIGINT,  _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
-    _wait_for_kafka()
+    start_metrics_server()
+    logger.info(f"Prometheus metrics → http://localhost:8000/metrics")
 
+    PROCESSES_TO_MONITOR = ['spark', 'kafka', 'retrieve_weather', 'replay_traffic', 'ui', 'backend']
+    for p in PROCESSES_TO_MONITOR:
+    	init_process_metrics(p)	
+
+    _wait_for_kafka()
+	# check kafka health
+    threading.Thread(target=_kafka_health_checker, daemon=True).start()
     # ── 1. Traffic replay ─────────────────────────────────────────────────────
-    logger.info("=== 1/3: replay_sumo_traffic ===")
+    logger.info("=== 1/5: replay_sumo_traffic ===")
     s1 = ProcSpec("replay_traffic",
                   [PYTHON, os.path.join(PROJECT_DIR, "Landing/replay_sumo_traffic.py")],
                   date_args)
@@ -270,19 +347,38 @@ def main() -> None:
     _start_supervised(s1)
 
     # ── 2. Weather fetch ──────────────────────────────────────────────────────
-    logger.info("=== 2/3: retrieve_data (weather) ===")
+    logger.info("=== 2/5: retrieve_data (weather) ===")
     s2 = ProcSpec("retrieve_weather",
                   [PYTHON, os.path.join(PROJECT_DIR, "Landing/retrieve_data.py")],
                   date_args)
     _all_specs.append(s2)
     _start_supervised(s2)
 
-    # ── 3. Single Spark application (bronze → silver → gold) ─────────────────
-    logger.info("=== 3/3: Spark pipeline (bronze → silver → gold) ===")
+    # ── 3. Dashboard backend (FastAPI, port 8001) ────────────────────────────
+    logger.info("=== 3/5: dashboard backend (port 8001) ===")
+    BACKEND_DIR = os.path.join(PROJECT_DIR, "dashboard", "dashboard_Trafficflow", "backend")
+    MYENV_UVICORN = "/home/dis/myenv/bin/uvicorn"
+    s_backend = ProcSpec("backend",
+                         ["bash", "-c",
+                          f"fuser -k 8001/tcp 2>/dev/null; sleep 0.5 && "
+                          f"cd {BACKEND_DIR!r} && {MYENV_UVICORN} app.main:app --host 0.0.0.0 --port 8001"])
+    _all_specs.append(s_backend)
+    _start_supervised(s_backend)
+
+    # ── 4. Dashboard UI (Next.js, port 3000) ─────────────────────────────────
+    logger.info("=== 4/5: dashboard UI (port 3000) ===")
+    UI_DIR = os.path.join(PROJECT_DIR, "dashboard", "dashboard_Trafficflow", "frontend")
+    s_ui = ProcSpec("ui",
+                    ["bash", "-c", f"fuser -k 3000/tcp 2>/dev/null; sleep 0.5 && cd {UI_DIR!r} && npm start"])
+    _all_specs.append(s_ui)
+    _start_supervised(s_ui)
+
+    # ── 5. Single Spark application (bronze → silver → gold) ─────────────────
+    logger.info("=== 5/5: Spark pipeline (bronze → silver → gold) ===")
     pipeline_cmd = [
         SPARK_SUBMIT,
         "--packages", "io.delta:delta-spark_2.12:3.2.0",
-        os.path.join(PROJECT_DIR, "main.py"),
+	os.path.join(PROJECT_DIR, "main.py"),
         "--pipeline",
     ] + date_args
     s3 = ProcSpec("spark", pipeline_cmd)
