@@ -296,8 +296,19 @@ export default function VisualizationPage() {
   const [forecastDate, setForecastDate] = useState("");
   const [forecastMinute, setForecastMinute] = useState(0);
   const [submittedForecast, setSubmittedForecast] = useState<ForecastLayerResponse | null>(null);
+  const [osNow, setOsNow] = useState<Date | null>(null);
   const realtimeIntervalSeconds =
     realtimeIntervalOption === "custom" ? Math.max(3, customRealtimeIntervalSeconds || 3) : Number(realtimeIntervalOption);
+
+  useEffect(() => {
+    function updateOsNow() {
+      setOsNow(new Date());
+    }
+
+    updateOsNow();
+    const intervalId = window.setInterval(updateOsNow, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -503,6 +514,10 @@ export default function VisualizationPage() {
   const availableMinutes = useMemo(() => {
     return Array.from(new Set(records.map((record) => record.minute).filter((minute): minute is number => minute !== null).map((minute) => Math.round(minute / 3) * 3))).sort((a, b) => a - b);
   }, [records]);
+  const isLoadedDateToday = osNow !== null && loadedDate === dateInputValue(osNow);
+  const historicalSliderMax = isLoadedDateToday
+    ? Math.floor(minuteOfDay(osNow) / 3) * 3
+    : 1440;
 
   useEffect(() => {
     if (visualizationMode === "historical" && availableMinutes.length) {
@@ -511,8 +526,15 @@ export default function VisualizationPage() {
     }
   }, [availableMinutes, visualizationMode]);
 
+  useEffect(() => {
+    if (visualizationMode !== "historical") return;
+
+    setSliderMinute((previous) => Math.min(previous, historicalSliderMax));
+    setSubmittedMinute((previous) => previous === null ? null : Math.min(previous, historicalSliderMax));
+  }, [historicalSliderMax, visualizationMode]);
+
   function handleSliderChange(rawValue: string) {
-    const roundedMinute = Math.max(0, Math.min(1440, Math.round(Number(rawValue) / 3) * 3));
+    const roundedMinute = Math.max(0, Math.min(historicalSliderMax, Math.round(Number(rawValue) / 3) * 3));
     setSliderMinute(roundedMinute);
     setSubmittedMinute(roundedMinute);
   }
@@ -675,14 +697,20 @@ export default function VisualizationPage() {
             <label className="time-slider-field">
               <div className="time-slider-body">
                 <span>Thời điểm trong ngày</span>
-                <input type="range" min={0} max={1440} step={3} value={sliderMinute} onChange={(event) => handleSliderChange(event.target.value)} />
+                <input type="range" min={0} max={historicalSliderMax} step={3} value={sliderMinute} onChange={(event) => handleSliderChange(event.target.value)} />
                 <strong>{minuteToTimeInput(sliderMinute)}</strong>
                 <div className="time-slider-scale">
                   <span>0h</span>
-                  <span>6h</span>
-                  <span>12h</span>
-                  <span>18h</span>
-                  <span>24h</span>
+                  {isLoadedDateToday ? (
+                    <span>{minuteToTimeInput(historicalSliderMax)} (hiện tại)</span>
+                  ) : (
+                    <>
+                      <span>6h</span>
+                      <span>12h</span>
+                      <span>18h</span>
+                      <span>24h</span>
+                    </>
+                  )}
                 </div>
               </div>
             </label>

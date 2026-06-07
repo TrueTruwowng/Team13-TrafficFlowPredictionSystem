@@ -57,6 +57,18 @@ function parseDateTime(value: unknown): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function formatLatestDate(value: Date | null): string {
+  if (!value) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(value);
+}
+
 // Return 3-minute bucket index (0..479) for a row, or null when unavailable
 function getHour(row: Record<string, unknown>): number | null {
   const fromHourColumn = row.hour;
@@ -151,13 +163,29 @@ function compareUnknownValues(left: unknown, right: unknown): number {
   return leftText.localeCompare(rightText, "vi", { numeric: true, sensitivity: "base" });
 }
 
+function buildLinePath(points: { x: number; y: number | null }[]): string {
+  let path = "";
+  let segmentStarted = false;
+
+  for (const point of points) {
+    if (point.y === null) {
+      segmentStarted = false;
+      continue;
+    }
+
+    path += `${segmentStarted ? " L" : " M"} ${point.x} ${point.y}`;
+    segmentStarted = true;
+  }
+
+  return path.trim();
+}
+
 export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   const RAW_PAGE_SIZE = 200;
   // Use the runtime-resolved API base (prefer env or hostname resolution).
   // Ignore the injected `apiBaseUrl` prop to avoid server-side '/api' values.
   const apiBase = getApiBaseUrl();
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("loading");
-  const [cloudMessage, setCloudMessage] = useState("Đang kiểm tra kết nối Cloud...");
   const [datasetList, setDatasetList] = useState<DatasetListResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedRoad, setSelectedRoad] = useState("");
@@ -192,15 +220,12 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     async function loadCloudStatus() {
       try {
         setCloudStatus("loading");
-        setCloudMessage("Đang kiểm tra kết nối Cloud...");
         const payload = await fetchJson<DatasetListResponse>(`${apiBase}/datasets`);
         setDatasetList(payload);
         setCloudStatus("connected");
-        setCloudMessage(`Đã kết nối Cloud, bucket: ${payload.bucket}`);
-      } catch (fetchError) {
+      } catch {
         setDatasetList(null);
         setCloudStatus("disconnected");
-        setCloudMessage(fetchError instanceof Error ? fetchError.message : "Không kết nối được tới Cloud");
       }
     }
 
@@ -283,6 +308,18 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
 
   const rows = dataPayload?.rows ?? [];
   const metrics = buildMetrics(rows);
+  const latestRecordDateTime = useMemo(() => {
+    let latest: Date | null = null;
+
+    for (const row of rows) {
+      const parsed = parseDateTime(row.recordDatetime);
+      if (parsed && (!latest || parsed.getTime() > latest.getTime())) {
+        latest = parsed;
+      }
+    }
+
+    return latest;
+  }, [rows]);
   const roadNames = buildRoadNames(rows);
   const hourList = buildHourList(rows);
   const rowHeaders = dataPayload?.columns.length ? dataPayload.columns : Object.keys(rows[0] ?? {});
@@ -399,27 +436,30 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     });
   }, [rows, isTodaySelected, currentBucketIndex]);
 
-  const hourlyFlowSeries = useMemo<number[]>(() => {
+  const hourlyFlowSeries = useMemo<Array<number | null>>(() => {
     const BUCKETS_PER_DAY = 24 * 60 / 3; // 480
-    const buckets = Array.from({ length: BUCKETS_PER_DAY }, () => 0);
+    const buckets: Array<number | null> = Array.from({ length: BUCKETS_PER_DAY }, () => null);
     for (const row of rowsForAggregation) {
       const bucket = getHour(row);
       const actualFlow = getActualFlowValue(row);
       if (bucket === null || bucket < 0 || bucket >= buckets.length || actualFlow === null) {
         continue;
       }
-      buckets[bucket] += actualFlow;
+      buckets[bucket] = (buckets[bucket] ?? 0) + actualFlow;
     }
     return buckets;
   }, [rowsForAggregation]);
 
   const maxHourlyFlow = useMemo<number>(() => {
-    return hourlyFlowSeries.reduce((maxValue: number, value: number) => (value > maxValue ? value : maxValue), 0);
+    return hourlyFlowSeries.reduce<number>(
+      (maxValue, value) => (value !== null && value > maxValue ? value : maxValue),
+      0
+    );
   }, [hourlyFlowSeries]);
 
   // Daily aggregate metrics for the sidebar
   const dailyAggregates = useMemo(() => {
-    const buckets = hourlyFlowSeries;
+    const buckets = hourlyFlowSeries.filter((value): value is number => value !== null);
     const dailyMaxFlow = buckets.length ? Math.max(...buckets) : 0;
     const dailyMinFlow = buckets.length ? Math.min(...buckets) : 0;
 
@@ -519,15 +559,17 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   const hourlyFlowPlot = useMemo(() => {
     const BUCKETS_PER_DAY = hourlyFlowSeries.length;
     const safeMax = maxHourlyFlow > 0 ? maxHourlyFlow : 1;
-    return hourlyFlowSeries.map((value: number, bucket: number) => {
+    return hourlyFlowSeries.map((value, bucket: number) => {
       const x = chartGeometry.marginLeft + (bucket / (BUCKETS_PER_DAY - 1)) * chartGeometry.plotWidth;
-      const y = chartGeometry.marginTop + chartGeometry.plotHeight - (value / safeMax) * chartGeometry.plotHeight;
+      const y = value === null
+        ? null
+        : chartGeometry.marginTop + chartGeometry.plotHeight - (value / safeMax) * chartGeometry.plotHeight;
       return { bucket, value, x, y };
     });
   }, [chartGeometry.marginLeft, chartGeometry.marginTop, chartGeometry.plotHeight, chartGeometry.plotWidth, hourlyFlowSeries, maxHourlyFlow]);
 
   // avg speed per bucket (flow-weighted when possible, otherwise simple mean per bucket)
-  const hourlyAvgSpeedSeries = useMemo<number[]>(() => {
+  const hourlyAvgSpeedSeries = useMemo<Array<number | null>>(() => {
     const BUCKETS_PER_DAY = 24 * 60 / 3;
     const sumNumer: number[] = Array.from({ length: BUCKETS_PER_DAY }, () => 0);
     const sumDenom: number[] = Array.from({ length: BUCKETS_PER_DAY }, () => 0);
@@ -543,11 +585,14 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
       sumDenom[bucket] += weight;
     }
 
-    return sumNumer.map((n, i) => (sumDenom[i] > 0 ? n / sumDenom[i] : 0));
+    return sumNumer.map((n, i) => (sumDenom[i] > 0 ? n / sumDenom[i] : null));
   }, [rowsForAggregation]);
 
   const maxAvgSpeed = useMemo(() => {
-    return hourlyAvgSpeedSeries.reduce((m, v) => (v > m ? v : m), 0);
+    return hourlyAvgSpeedSeries.reduce<number>(
+      (maxValue, value) => (value !== null && value > maxValue ? value : maxValue),
+      0
+    );
   }, [hourlyAvgSpeedSeries]);
 
   const hourlyWeatherSeries = useMemo(() => {
@@ -619,9 +664,11 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
 
   const hourlySpeedPlot = useMemo(() => {
     const BUCKETS_PER_DAY = hourlyAvgSpeedSeries.length;
-    return hourlyAvgSpeedSeries.map((value: number, bucket: number) => {
+    return hourlyAvgSpeedSeries.map((value, bucket: number) => {
       const x = chartGeometry.marginLeft + (bucket / (BUCKETS_PER_DAY - 1)) * chartGeometry.plotWidth;
-      const ySpeed = chartGeometry.marginTop + chartGeometry.plotHeight - (value / secondaryAxisMax) * chartGeometry.plotHeight;
+      const ySpeed = value === null
+        ? null
+        : chartGeometry.marginTop + chartGeometry.plotHeight - (value / secondaryAxisMax) * chartGeometry.plotHeight;
       return { bucket, value, x, ySpeed };
     });
   }, [chartGeometry.marginLeft, chartGeometry.marginTop, chartGeometry.plotHeight, chartGeometry.plotWidth, hourlyAvgSpeedSeries, secondaryAxisMax]);
@@ -629,16 +676,26 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
   const hourlyTemperaturePlot = useMemo(() => {
     const BUCKETS_PER_DAY = hourlyWeatherSeries.length;
     return hourlyWeatherSeries.map((item) => {
-      const value = item.temperature ?? 0;
+      const value = item.temperature;
       const x = chartGeometry.marginLeft + (item.bucket / (BUCKETS_PER_DAY - 1)) * chartGeometry.plotWidth;
-      const yTemperature = chartGeometry.marginTop + chartGeometry.plotHeight - (value / secondaryAxisMax) * chartGeometry.plotHeight;
+      const yTemperature = value === null
+        ? null
+        : chartGeometry.marginTop + chartGeometry.plotHeight - (value / secondaryAxisMax) * chartGeometry.plotHeight;
       return { bucket: item.bucket, value, x, yTemperature };
     });
   }, [chartGeometry.marginLeft, chartGeometry.marginTop, chartGeometry.plotHeight, chartGeometry.plotWidth, hourlyWeatherSeries, secondaryAxisMax]);
 
-  const hourlyFlowPoints = useMemo<string>(() => {
-    return hourlyFlowPlot.map((point: { bucket: number; value: number; x: number; y: number }) => `${point.x},${point.y}`).join(" ");
+  const hourlyFlowPath = useMemo(() => {
+    return buildLinePath(hourlyFlowPlot);
   }, [hourlyFlowPlot]);
+
+  const hourlySpeedPath = useMemo(() => {
+    return buildLinePath(hourlySpeedPlot.map((point) => ({ x: point.x, y: point.ySpeed })));
+  }, [hourlySpeedPlot]);
+
+  const hourlyTemperaturePath = useMemo(() => {
+    return buildLinePath(hourlyTemperaturePlot.map((point) => ({ x: point.x, y: point.yTemperature })));
+  }, [hourlyTemperaturePlot]);
 
   const yAxisTicks = useMemo<number[]>(() => {
     const safeMax = maxHourlyFlow > 0 ? maxHourlyFlow : 1;
@@ -657,13 +714,16 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     if (hoveredHour === null) {
       return null;
     }
-    return hourlyFlowPlot.find((point: { bucket: number; value: number; x: number; y: number }) => point.bucket === hoveredHour) ?? null;
+    return hourlyFlowPlot.find((point) => point.bucket === hoveredHour) ?? null;
   }, [hourlyFlowPlot, hoveredHour]);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [hoveredMouse, setHoveredMouse] = useState<{ x: number; y: number } | null>(null);
 
-  const hasChartData = maxHourlyFlow > 0 || maxAvgSpeed > 0 || maxTemperature > 0;
+  const hasChartData =
+    hourlyFlowSeries.some((value) => value !== null) ||
+    hourlyAvgSpeedSeries.some((value) => value !== null) ||
+    hourlyWeatherSeries.some((item) => item.temperature !== null);
 
   function toggleRoadSort(_column: string) {
     // road summary removed
@@ -740,20 +800,8 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
 
             <div className="hero-stats light-stats">
               <div className="metric-card light-metric">
-                <div className="metric-label">Bản ghi</div>
-                <div className="metric-value">{formatNumber(metrics.records)}</div>
-              </div>
-              <div className="metric-card light-metric">
-                <div className="metric-label">Đường</div>
-                <div className="metric-value">{formatNumber(metrics.roads)}</div>
-              </div>
-              <div className="metric-card light-metric">
-                <div className="metric-label">Giờ</div>
-                <div className="metric-value">{formatNumber(metrics.hours)}</div>
-              </div>
-              <div className="metric-card light-metric">
-                <div className="metric-label">Ngày đã gửi</div>
-                <div className="metric-value">{submittedDate || "--"}</div>
+                <div className="metric-label">Ngày dữ liệu mới nhất</div>
+                <div className="metric-value">{formatLatestDate(latestRecordDateTime)}</div>
               </div>
             </div>
           </div>
@@ -764,8 +812,8 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
             </div>
             <div className="status-grid">
               <div className="status-item light-status-item">
-                <div className="status-label">Kết nối Cloud</div>
-                <div className="status-value">{cloudMessage}</div>
+                <div className="status-label">Bucket</div>
+                <div className="status-value">{datasetList?.bucket ?? "--"}</div>
               </div>
               <div className="status-item light-status-item">
                 <div className="status-label">Backend API</div>
@@ -775,11 +823,6 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                 <div className="status-label">Ngày khả dụng</div>
                 <div className="status-value">{formatNumber(availableDates.length)}</div>
               </div>
-            </div>
-            <div className="actions-row light-actions">
-              <span className="pill light-pill">{cloudStatus === "connected" ? `${availableDates.length} dates found` : "Waiting for Cloud"}</span>
-              <span className="pill light-pill-soft">{submittedRoad ? `Road: ${submittedRoad}` : "Road: tất cả"}</span>
-              <span className="pill muted light-pill-muted">{loadingData ? "Loading data" : `${metrics.records} rows loaded`}</span>
             </div>
             {error ? <div className="error-box light-error">{error}</div> : null}
           </aside>
@@ -859,7 +902,6 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
             <div className="flow-chart-wrap">
               <div className="flow-chart-meta">
                 <span>{isTodaySelected ? "Từ 00:00 đến hiện tại" : "Từ 00:00 đến 24:00"}</span>
-                <strong>Max khung 3-phút: {formatNumber(maxHourlyFlow)}</strong>
                 <div className="chart-series-filter" aria-label="Chọn dữ liệu hiển thị trên biểu đồ">
                   <label>
                     <input
@@ -983,11 +1025,11 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                       <text className="flow-axis-title" x={18} y={chartGeometry.marginTop + chartGeometry.plotHeight / 2} transform={`rotate(-90 18 ${chartGeometry.marginTop + chartGeometry.plotHeight / 2})`}>
                         Flow (xe/3 phút)
                       </text>
-                      <polyline className="flow-chart-line" points={hourlyFlowPoints} />
+                      <path className="flow-chart-line" d={hourlyFlowPath} />
                     </>
                   ) : null}
-                  {showSpeedSeries ? <polyline className="speed-chart-line" points={hourlySpeedPlot.map((p) => `${p.x},${p.ySpeed}`).join(" ")} /> : null}
-                  {showTemperatureSeries ? <polyline className="temperature-chart-line" points={hourlyTemperaturePlot.map((p) => `${p.x},${p.yTemperature}`).join(" ")} /> : null}
+                  {showSpeedSeries ? <path className="speed-chart-line" d={hourlySpeedPath} /> : null}
+                  {showTemperatureSeries ? <path className="temperature-chart-line" d={hourlyTemperaturePath} /> : null}
                   {/* Right-side secondary axis for speed and temperature. */}
                   {showSpeedSeries || showTemperatureSeries ? [1, 0.75, 0.5, 0.25, 0].map((ratio, index) => {
                     const y = chartGeometry.marginTop + (index / 4) * chartGeometry.plotHeight;
@@ -1015,10 +1057,14 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
                     }}
                   >
                     <strong>{formatBucketTime(hoveredPoint.bucket)}</strong>
-                    {showFlowSeries ? <span>Flow: {formatNumber(hoveredPoint.value)} xe/3 phút</span> : null}
+                    {showFlowSeries ? (
+                      <span>
+                        Flow: {hoveredPoint.value !== null ? `${formatNumber(hoveredPoint.value)} xe/3 phút` : "N/A"}
+                      </span>
+                    ) : null}
                     {showSpeedSeries ? (
                       <span style={{ color: "#ef4444" }}>
-                        Tốc độ TB: {hourlyAvgSpeedSeries?.[hoveredPoint.bucket] && hourlyAvgSpeedSeries[hoveredPoint.bucket] > 0 ? `${formatNumber(hourlyAvgSpeedSeries[hoveredPoint.bucket], 1)} km/h` : "N/A"}
+                        Tốc độ TB: {hourlyAvgSpeedSeries[hoveredPoint.bucket] !== null ? `${formatNumber(hourlyAvgSpeedSeries[hoveredPoint.bucket], 1)} km/h` : "N/A"}
                       </span>
                     ) : null}
                     {showTemperatureSeries ? (
