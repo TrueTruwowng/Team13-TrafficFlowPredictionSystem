@@ -16,6 +16,7 @@ services:
       - "worker142:10.148.0.4"
     restart: always
 
+<<<<<<< HEAD
   kafka-exporter:
     image: danielqsj/kafka-exporter:v1.7.0
     container_name: kafka-exporter
@@ -76,3 +77,5 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+=======
+>>>>>>> origin/main
