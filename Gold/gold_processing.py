@@ -7,7 +7,7 @@ from pyspark.sql import DataFrame, functions as F
 from dotenv import load_dotenv
 
 from spark_session import get_spark
-from config import GCS_BUCKET
+from config import GCS_BUCKET, CONGESTION_SPEED_THRESHOLD_KMH
 
 load_dotenv()
 
@@ -17,52 +17,96 @@ SILVER_PATH = f"gs://{GCS_BUCKET}/silver"
 GOLD_PATH   = f"gs://{GCS_BUCKET}/gold"
 GOLD_CKPT   = f"gs://{GCS_BUCKET}/checkpoints/gold"
 
+# SUMO tra toc do theo m/s, config dinh nghia nguong theo km/h
+CONGESTION_SPEED_THRESHOLD = CONGESTION_SPEED_THRESHOLD_KMH / 3.6
+
 
 def _write_gold_batch(batch_df: DataFrame, batch_id: int):
     if batch_df.isEmpty():
         return
 
     try:
-        # Lấy các (road_name, recordDatetime) có trong batch này
-        affected_keys = batch_df.select("road_name", "recordDatetime").distinct()
+        # batch_df da duoc aggregate o silver: 1 dong / (road_name, recordDatetime)
+        # Lay cac (road_name, date, hour) bi anh huong de tinh peakFlow/minFlow trong gio
+        ts_col = F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm")
+        batch_with_hour = batch_df.withColumn("hour", F.hour(ts_col))
+        affected_road_hours = batch_with_hour.select("road_name", "date", "hour").distinct()
+        date_list = [r["date"] for r in affected_road_hours.select("date").distinct().collect()]
 
-        # Re-aggregate toàn bộ silver cho các key đó (kể cả data cũ + late data)
-        silver_full = (
+        silver_all = (
             batch_df.sparkSession.read.format("delta").load(SILVER_PATH)
-            .join(affected_keys, on=["road_name", "recordDatetime"], how="inner")
+            .filter(F.col("date").isin(date_list))
+            .withColumn("hour", F.hour(F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm")))
+            .join(affected_road_hours, on=["road_name", "date", "hour"], how="inner")
         )
-        gold_df = (
-            silver_full
-            .groupBy("road_name", "recordDatetime")
+
+        # Tinh peakFlow / minFlow theo gio cho tung tuyen duong (cap nhat moi 3p trong gio)
+        hourly_stats = (
+            silver_all
+            .groupBy("road_name", "date", "hour")
             .agg(
-                F.round(F.avg("speed"),       2).alias("avg_speed"),
-                F.round(F.avg("laneDensity"), 2).alias("avg_density"),
-                F.round(F.avg("occupancy"),   2).alias("avg_occupancy"),
-                F.round(F.avg("waitingTime"), 2).alias("avg_waitingTime"),
-                F.round(F.avg("traveltime"),  2).alias("avg_traveltime"),
-                F.round(F.avg("flow"),        2).alias("avg_flow"),
-                F.round(F.sum("entered"),     2).alias("total_entered"),
-                F.round(F.sum("left"),        2).alias("total_left"),
-                F.round(F.avg("timeloss"),    2).alias("avg_timeloss"),
-                F.first("temperature").alias("temperature"),
-                F.first("windspeed").alias("windspeed"),
-                F.first("precipitation").alias("precipitation"),
-                F.first("weather").alias("weather"),
+                F.round(F.max("avg_flow"), 2).alias("peakFlow"),
+                F.round(F.min("avg_flow"), 2).alias("minFlow"),
             )
-            .withColumn("date", F.to_date("recordDatetime", "yyyy-MM-dd'T'HH:mm"))
         )
+
+        GOLD_COLS = [
+            "roadName", "recordDatetime",
+            "totalVehicle", "congestionHour",
+            "peakFlow", "minFlow", "actualFlow",
+            "avg_speed",
+            "temperature", "windspeed", "precipitation", "weather",
+            "date",
+        ]
+        hourly_stats_rn = hourly_stats.withColumnRenamed("road_name", "roadName")
+
+        new_gold = (
+            batch_with_hour
+            .join(hourly_stats, on=["road_name", "date", "hour"], how="left")
+            .drop("hour")
+            .withColumnRenamed("road_name", "roadName")
+            .withColumn("totalVehicle", F.col("total_entered").cast("long"))
+            .withColumn("congestionHour",
+                F.when(F.col("avg_speed") < CONGESTION_SPEED_THRESHOLD, 1).otherwise(0))
+            .withColumn("actualFlow", F.col("avg_flow"))
+            .select(*GOLD_COLS)
+        )
+
+        from delta.tables import DeltaTable
+        gold_exists = DeltaTable.isDeltaTable(batch_df.sparkSession, GOLD_PATH)
+
+        if gold_exists:
+            # Re-apply updated peakFlow/minFlow to existing Gold records in the same hours
+            affected_rn = affected_road_hours.withColumnRenamed("road_name", "roadName")
+            existing_gold = (
+                batch_df.sparkSession.read.format("delta").load(GOLD_PATH)
+                .filter(F.col("date").isin(date_list))
+                .withColumn("hour", F.hour(F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm")))
+                .join(affected_rn, on=["roadName", "date", "hour"], how="inner")
+                .join(
+                    new_gold.select("roadName", "date", "recordDatetime"),
+                    on=["roadName", "date", "recordDatetime"],
+                    how="left_anti",  # exclude records already in new_gold
+                )
+                .drop("peakFlow", "minFlow")
+                .join(hourly_stats_rn, on=["roadName", "date", "hour"], how="left")
+                .drop("hour")
+                .select(*GOLD_COLS)
+            )
+            gold_df = new_gold.unionByName(existing_gold).dropDuplicates(["roadName", "date", "recordDatetime"])
+        else:
+            gold_df = new_gold
 
         gold_df.cache()
         count = gold_df.count()
 
-        from delta.tables import DeltaTable
-        if DeltaTable.isDeltaTable(batch_df.sparkSession, GOLD_PATH):
+        if gold_exists:
             (
                 DeltaTable.forPath(batch_df.sparkSession, GOLD_PATH)
                 .alias("t")
                 .merge(
                     gold_df.alias("s"),
-                    "t.road_name = s.road_name AND t.recordDatetime = s.recordDatetime",
+                    "t.date = s.date AND t.roadName = s.roadName AND t.recordDatetime = s.recordDatetime",
                 )
                 .whenMatchedUpdateAll()
                 .whenNotMatchedInsertAll()
@@ -106,6 +150,8 @@ def start_streams(spark_session):
     silver_stream = (
         spark.readStream
         .format("delta")
+        .option("schemaEvolutionMode", "addNewColumns")
+        .option("skipChangeCommits", "true")
         .load(SILVER_PATH)
         .withColumn("event_time", F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm"))
         .withWatermark("event_time", "5 minutes")

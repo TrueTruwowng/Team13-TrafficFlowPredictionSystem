@@ -72,11 +72,26 @@ done
 
 # --- 6. KHỞI CHẠY SPARK ---
 echo "2. Starting Spark Cluster..."
+# Dọn sạch bất kỳ Spark process nào đang chạy (kể cả từ /lib/spark)
+/lib/spark/sbin/stop-all.sh > /dev/null 2>&1
+$SPARK_PATH/sbin/stop-all.sh > /dev/null 2>&1
+sleep 2
 $SPARK_PATH/sbin/start-all.sh
-echo "   -> Spark: Master & Workers started"
+echo "   -> Spark 3.5.1: Master & Workers started"
 
-# --- 7. KHỞI CHẠY AIRFLOW ---
-echo "3. Starting Airflow..."
+# --- 7. KHỞI CHẠY DASHBOARD ---
+echo "3. Starting Dashboard Backend (port 8000)..."
+BACKEND_DIR="/home/dis/Project/dashboard/dashboard_Trafficflow/backend"
+nohup bash -c "cd '$BACKEND_DIR' && $PYTHON_ENV -m uvicorn app.main:app --host 0.0.0.0 --port 8001" > /tmp/backend.log 2>&1 &
+echo "   -> Dashboard Backend: started (log: /tmp/backend.log)"
+
+echo "   Starting Dashboard UI (port 3000)..."
+UI_DIR="/home/dis/Project/dashboard/dashboard_Trafficflow/frontend"
+nohup bash -c "cd '$UI_DIR' && npm start" > /tmp/ui_dashboard.log 2>&1 &
+echo "   -> Dashboard UI: started (log: /tmp/ui_dashboard.log)"
+
+# --- 8. KHỞI CHẠY AIRFLOW ---
+echo "4. Starting Airflow..."
 export AIRFLOW_HOME=$AIRFLOW_HOME
 rm -f $AIRFLOW_HOME/*.pid
 $AIRFLOW_BIN webserver -p 8082 -D
@@ -98,4 +113,7 @@ echo "--------------------------------------------------"
 echo "⭐ Spark Master: http://$EXT_IP:8080"
 echo "⭐ Airflow UI:   http://$EXT_IP:8082"
 echo "⭐ Kafka UI:     http://$EXT_IP:8085"
+echo "⭐ Dashboard UI: http://$EXT_IP:3000"
+echo "⭐ Grafana:      http://$EXT_IP:3001"
+echo "⭐ Prometheus:   http://$EXT_IP:9090"
 echo "=================================================="

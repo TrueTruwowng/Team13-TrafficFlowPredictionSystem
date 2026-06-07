@@ -35,6 +35,12 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
         return
 
     try:
+        # Loai cac edge khong co ten trong OSM (road_name null) — junk, khong
+        # dung cho dashboard theo tuyen duong. Truoc day INNER JOIN voi weather
+        # vo tinh loc chung; voi LEFT JOIN phai loc tuong minh de tranh row rac
+        # (peak/min null vi khong join duoc tren road_name null).
+        batch_df = batch_df.filter(F.col("road_name").isNotNull())
+
         # Floor recordDatetime xuong moc weather gan nhat de join
         traffic = batch_df.withColumn(
             "weather_time",
@@ -51,30 +57,71 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
             .withColumnRenamed("datetime",  "w_datetime")
         )
 
-        silver_df = (
+        # LEFT JOIN: khong bao gio drop traffic chi vi thieu weather interval.
+        # Weather columns se null neu khong co match — chap nhan duoc.
+        joined_df = (
             traffic
             .join(
                 w,
                 (traffic["road_name"]    == w["w_road_name"]) &
                 (traffic["weather_time"] == w["w_datetime"]),
-                how="inner",
+                how="left",
             )
             .drop("w_road_name", "w_datetime", "weather_time")
+        )
+
+        # Gop nhieu lane thanh 1 dong / (road_name, recordDatetime)
+        silver_df = (
+            joined_df
+            .groupBy("road_name", "recordDatetime")
+            .agg(
+                F.round(F.avg("speed"),       2).alias("avg_speed"),
+                F.round(F.avg("laneDensity"), 2).alias("avg_density"),
+                F.round(F.avg("occupancy"),   2).alias("avg_occupancy"),
+                F.round(F.avg("waitingTime"), 2).alias("avg_waitingTime"),
+                F.round(F.avg("traveltime"),  2).alias("avg_traveltime"),
+                F.coalesce(F.round(F.avg("flow"), 2), F.lit(0.0)).alias("avg_flow"),
+                F.round(F.sum("entered"),     2).alias("total_entered"),
+                F.round(F.sum("left"),        2).alias("total_left"),
+                F.round(F.avg("timeloss"),    2).alias("avg_timeloss"),
+                F.first("temperature").alias("temperature"),
+                F.first("windspeed").alias("windspeed"),
+                F.first("precipitation").alias("precipitation"),
+                F.first("weather").alias("weather"),
+            )
             .withColumn("date", F.to_date("recordDatetime", "yyyy-MM-dd'T'HH:mm"))
         )
 
         silver_df.cache()
         count = silver_df.count()
-        (
-            silver_df.write
-            .format("delta")
-            .mode("append")
-            .option("mergeSchema", "true")
-            .partitionBy("date")
-            .save(SILVER_PATH)
-        )
+        if count == 0:
+            silver_df.unpersist()
+            return
+
+        from delta.tables import DeltaTable
+        if DeltaTable.isDeltaTable(batch_df.sparkSession, SILVER_PATH):
+            (
+                DeltaTable.forPath(batch_df.sparkSession, SILVER_PATH)
+                .alias("t")
+                .merge(
+                    silver_df.alias("s"),
+                    "t.date = s.date AND t.road_name = s.road_name AND t.recordDatetime = s.recordDatetime",
+                )
+                .whenMatchedUpdateAll()
+                .whenNotMatchedInsertAll()
+                .execute()
+            )
+        else:
+            (
+                silver_df.write
+                .format("delta")
+                .option("mergeSchema", "true")
+                .partitionBy("date")
+                .save(SILVER_PATH)
+            )
+
         silver_df.unpersist()
-        print(f"[silver] batch {batch_id}: {count} rows → delta", flush=True)
+        print(f"[silver] batch {batch_id}: {count} rows → delta (upsert)", flush=True)
     except Exception as e:
         print(f"[silver] batch {batch_id}: ERROR — {e}", flush=True)
         raise
@@ -102,6 +149,8 @@ def start_streams(spark_session):
     traffic_stream = (
         spark.readStream
         .format("delta")
+        .option("schemaEvolutionMode", "addNewColumns")
+        .option("skipChangeCommits", "true")
         .load(TRAFFIC_BRONZE)
         .withColumn("event_time", F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm"))
         .withWatermark("event_time", "5 minutes")
