@@ -145,6 +145,9 @@ def start_streams(spark_session):
         spark.readStream
         .schema(traffic_landing_schema)
         .option("recursiveFileLookup", "true")
+        # Tier1: bound moi micro-batch tranh OOM khi catch-up. Steady-state ~1 file/3p
+        # nen khong han che do tre. (Revert: bo dong nay)
+        .option("maxFilesPerTrigger", "200")
         .json(TRAFFIC_LANDING)
         .withColumn("recordDatetime",
             F.concat(F.col("date"), F.lit("T"), F.col("end")).cast("timestamp"))
@@ -155,22 +158,26 @@ def start_streams(spark_session):
         spark.readStream
         .schema(weather_landing_schema)
         .option("recursiveFileLookup", "true")
+        .option("maxFilesPerTrigger", "200")  # Tier1 (revert: bo dong nay)
         .json(WEATHER_LANDING)
         .withColumn("datetime",
             F.concat(F.col("date"), F.lit("T"), F.col("end")).cast("timestamp"))
         .withWatermark("datetime", "5 minutes")
     )
 
+    # Tier1: trigger 3 minutes -> 60 seconds de cat thoi gian cho trigger.
+    # Batch rong return som (_write_*_batch) nen khong sinh file nho thua.
+    # REVERT: doi lai processingTime="3 minutes" (tuong thich checkpoint, khong can xoa checkpoint).
     traffic_stream.writeStream \
         .foreachBatch(_write_traffic_batch) \
         .option("checkpointLocation", TRAFFIC_CKPT) \
-        .trigger(processingTime="3 minutes") \
+        .trigger(processingTime="60 seconds") \
         .start()
 
     weather_stream.writeStream \
         .foreachBatch(_write_weather_batch) \
         .option("checkpointLocation", WEATHER_CKPT) \
-        .trigger(processingTime="3 minutes") \
+        .trigger(processingTime="60 seconds") \
         .start()
 
 

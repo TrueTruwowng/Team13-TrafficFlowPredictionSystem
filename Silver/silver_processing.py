@@ -156,10 +156,13 @@ def start_streams(spark_session):
         .withWatermark("event_time", "5 minutes")
     )
 
+    # Tier1: trigger 3 minutes -> 60 seconds. Silver chi nhan batch co data khi bronze
+    # commit (~3p/lan) nen MERGE van chay ~1 lan/3p, khong tang tan suat MERGE.
+    # REVERT: doi lai processingTime="3 minutes" (tuong thich checkpoint).
     traffic_stream.writeStream \
         .foreachBatch(_write_silver_batch) \
         .option("checkpointLocation", SILVER_CKPT) \
-        .trigger(processingTime="3 minutes") \
+        .trigger(processingTime="60 seconds") \
         .start()
 
 

@@ -148,17 +148,28 @@ function minuteOfDay(value: Date): number {
   return value.getHours() * 60 + value.getMinutes();
 }
 
-function forecastStepMinutes(option: ForecastHorizonOption): number {
-  return option === "custom" ? 5 : Number(option);
-}
+// Ngưỡng density TUYỆT ĐỐI theo loại đường (veh/km): [vàng, cam, đỏ].
+// Calibrate từ lịch sử silver: mức "đỏ" ~ density khi tốc độ tụt <20km/h (tắc thật),
+// vàng/cam chia phía dưới. Thay cho chuẩn hóa min/max — vốn gây "xanh lè" khi forecast
+// (dải min/max ngày rộng) và "đỏ giả" ban đêm (dải min/max hẹp). Chỉnh số ở đây nếu
+// muốn nhạy hơn/ít hơn.
+const DENSITY_THRESHOLDS: Record<string, [number, number, number]> = {
+  trunk: [1.5, 3, 5],
+  primary: [3, 7, 11],
+  secondary: [6, 12, 20],
+  tertiary: [6, 12, 20],
+  residential: [3, 6, 10],
+  service: [3, 6, 10],
+};
+const DENSITY_THRESHOLDS_DEFAULT: [number, number, number] = [4, 8, 12];
 
-function colorForDensity(value: number | null, minDensity: number, maxDensity: number): string {
+function colorForDensity(value: number | null, highway: string | null): string {
   if (value === null || !Number.isFinite(value)) return "#9aa3ad";
-  const ratio = maxDensity > minDensity ? Math.max(0, Math.min(1, (value - minDensity) / (maxDensity - minDensity))) : 0;
-  if (ratio < 0.25) return "#2ecc71";
-  if (ratio < 0.5) return "#f1c40f";
-  if (ratio < 0.75) return "#e67e22";
-  return "#e74c3c";
+  const [yellow, orange, red] = (highway && DENSITY_THRESHOLDS[highway]) || DENSITY_THRESHOLDS_DEFAULT;
+  if (value < yellow) return "#2ecc71"; // xanh - thông thoáng
+  if (value < orange) return "#f1c40f"; // vàng - hơi đông
+  if (value < red) return "#e67e22";    // cam - đông
+  return "#e74c3c";                     // đỏ - tắc
 }
 
 function escapeHtml(value: string): string {
@@ -468,7 +479,9 @@ export default function VisualizationPage() {
       setError(null);
       setDataState("loading");
       const target = dateAtMinute(forecastDate, forecastMinute);
-      const stepMinutes = forecastStepMinutes(forecastHorizonOption);
+      // step = horizon => luôn 1 bước dự báo (tránh rollout đệ quy nhiều bước gây phân kỳ density).
+      const anchor = new Date(forecastStatus.anchor_datetime);
+      const stepMinutes = Math.max(1, Math.round((target.getTime() - anchor.getTime()) / 60000));
       const apiBase = getApiBaseUrl();
       const forecastPayload = await fetchJson<ForecastLayerResponse>(
         `${apiBase}/predictions/modelai-final/silver/forecast?target_datetime=${encodeURIComponent(toApiDateTime(target))}&step_minutes=${stepMinutes}`
@@ -567,7 +580,7 @@ export default function VisualizationPage() {
             rows: density?.rows ?? 0,
             dayMinDensity: dailyRange?.min ?? null,
             dayMaxDensity: dailyRange?.max ?? null,
-            color: colorForDensity(density?.density ?? null, dailyRange?.min ?? 0, dailyRange?.max ?? 1),
+            color: colorForDensity(density?.density ?? null, feature.highway),
             weight: matched ? 6 : 2,
             opacity: matched ? 0.92 : 0.22,
             matched,
