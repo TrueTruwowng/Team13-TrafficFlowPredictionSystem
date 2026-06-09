@@ -7,26 +7,27 @@ from pyspark.sql import DataFrame, functions as F
 from dotenv import load_dotenv
 
 from spark_session import get_spark
-from config import GCS_BUCKET
+from config import GCS_PATHS
 
 load_dotenv()
 
-spark = None  # injected via start_streams(); created locally when run standalone
+spark = None
 
-TRAFFIC_BRONZE        = f"gs://{GCS_BUCKET}/bronze/traffic"
-WEATHER_BRONZE        = f"gs://{GCS_BUCKET}/bronze/weather"
-SILVER_PATH           = f"gs://{GCS_BUCKET}/silver"
-SILVER_CKPT           = f"gs://{GCS_BUCKET}/checkpoints/silver"
-WEATHER_INTERVAL_SECS = 180  # 3 minutes, same as traffic interval
+TRAFFIC_BRONZE  = GCS_PATHS["bronze_traffic"]
+WEATHER_BRONZE  = GCS_PATHS["bronze_weather"]
+SILVER_PATH     = GCS_PATHS["silver"]
+SILVER_CKPT     = GCS_PATHS["ckpt_silver"]
+
+# Weather records arrive every 3 minutes; floor recordDatetime to the nearest
+# 3-minute mark so traffic rows join correctly against weather rows.
+WEATHER_INTERVAL_SECS = 180
 
 
 def _load_weather() -> DataFrame:
     return (
         spark.read.format("delta").load(WEATHER_BRONZE)
-        .select(
-            "road_name", "datetime",
-            "temperature", "windspeed", "precipitation", "weather",
-        )
+        .select("road_name", "datetime",
+                "temperature", "windspeed", "precipitation", "weather")
     )
 
 
@@ -35,13 +36,10 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
         return
 
     try:
-        # Loai cac edge khong co ten trong OSM (road_name null) — junk, khong
-        # dung cho dashboard theo tuyen duong. Truoc day INNER JOIN voi weather
-        # vo tinh loc chung; voi LEFT JOIN phai loc tuong minh de tranh row rac
-        # (peak/min null vi khong join duoc tren road_name null).
+        # Drop edges with no OSM road name — they produce null peak/min values
+        # because they can't join on road_name, and pollute the silver table.
         batch_df = batch_df.filter(F.col("road_name").isNotNull())
 
-        # Floor recordDatetime xuong moc weather gan nhat de join
         traffic = batch_df.withColumn(
             "weather_time",
             F.from_unixtime(
@@ -57,8 +55,7 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
             .withColumnRenamed("datetime",  "w_datetime")
         )
 
-        # LEFT JOIN: khong bao gio drop traffic chi vi thieu weather interval.
-        # Weather columns se null neu khong co match — chap nhan duoc.
+        # LEFT JOIN so traffic rows are never dropped due to missing weather intervals.
         joined_df = (
             traffic
             .join(
@@ -70,7 +67,7 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
             .drop("w_road_name", "w_datetime", "weather_time")
         )
 
-        # Gop nhieu lane thanh 1 dong / (road_name, recordDatetime)
+        # Aggregate multiple SUMO lanes into one row per (road_name, recordDatetime).
         silver_df = (
             joined_df
             .groupBy("road_name", "recordDatetime")
@@ -128,7 +125,6 @@ def _write_silver_batch(batch_df: DataFrame, batch_id: int):
 
 
 def _wait_for_delta(path: str, spark_session=None, retries: int = 40, delay: int = 30) -> None:
-    """Block until a Delta table exists and has a committed schema."""
     import time
     s = spark_session or spark
     for i in range(1, retries + 1):
@@ -156,9 +152,6 @@ def start_streams(spark_session):
         .withWatermark("event_time", "5 minutes")
     )
 
-    # Tier1: trigger 3 minutes -> 60 seconds. Silver chi nhan batch co data khi bronze
-    # commit (~3p/lan) nen MERGE van chay ~1 lan/3p, khong tang tan suat MERGE.
-    # REVERT: doi lai processingTime="3 minutes" (tuong thich checkpoint).
     traffic_stream.writeStream \
         .foreachBatch(_write_silver_batch) \
         .option("checkpointLocation", SILVER_CKPT) \

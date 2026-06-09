@@ -77,20 +77,8 @@ sleep 2
 $SPARK_PATH/sbin/start-all.sh
 echo "   -> Spark 3.5.1: Master & Workers started"
 
-# --- 7. KHỞI CHẠY DASHBOARD ---
-echo "3. Starting Dashboard Backend (port 8000)..."
-BACKEND_DIR="/home/dis/Project/dashboard/backend"
-nohup bash -c "cd '$BACKEND_DIR' && $PYTHON_ENV -m uvicorn app.main:app --host 0.0.0.0 --port 8001" > /tmp/backend.log 2>&1 &
-echo "   -> Dashboard Backend: started (log: /tmp/backend.log)"
-
-echo "   Starting Dashboard UI (port 3000)..."
-UI_DIR="/home/dis/Project/dashboard/frontend"
-NPM_BIN="/home/TrueTruwowng/.nvm/versions/node/v25.9.0/bin/npm"
-nohup bash -c "cd '$UI_DIR' && $NPM_BIN start" > /tmp/ui_dashboard.log 2>&1 &
-echo "   -> Dashboard UI: started (log: /tmp/ui_dashboard.log)"
-
 echo "=================================================="
-echo "✅ ALL SERVICES DEPLOYED SUCCESSFULLY!"
+echo "✅ Infrastructure ready. Run: python main.py"
 echo "=================================================="
 
 # --- TRẠNG THÁI TIẾN TRÌNH ---

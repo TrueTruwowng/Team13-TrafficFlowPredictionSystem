@@ -1,45 +1,56 @@
 import os
+import shutil
+import sys
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 load_dotenv()
 
-VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+TIMEZONE = "Asia/Ho_Chi_Minh"
+VN_TZ    = ZoneInfo(TIMEZONE)
 
 def now_vn() -> datetime:
-    """Trả về thời gian hiện tại theo giờ Việt Nam (UTC+7)."""
     return datetime.now(tz=VN_TZ)
 
-# ── Kafka ─────────────────────────────────────────────────────────────────────
+# Kafka
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
 
 KAFKA_TOPICS = {
-    "traffic_simulate": "traffic_simulate",   # từ SUMO
-    "weather":          "weather_raw",         # từ Open-Meteo API
+    "traffic_simulate": "traffic_simulate",
+    "weather":          "weather_raw",
 }
 
-# ── GCS ───────────────────────────────────────────────────────────────────────
+# GCS
 GCS_BUCKET = os.getenv("GCS_BUCKET_NAME", "big-data-storage13")
 
 GCS_PATHS = {
-    # Landing (JSON thô từ Kafka consumer)
-    "landing_traffic":  f"gs://{GCS_BUCKET}/landing/traffic/traffic_simulate",
-    "landing_weather":  f"gs://{GCS_BUCKET}/landing/weather/weather_raw",
+    # Landing (raw JSON written by Kafka consumer)
+    "landing_traffic":     f"gs://{GCS_BUCKET}/landing/traffic",
+    "landing_weather":     f"gs://{GCS_BUCKET}/landing/weather",
+
+    # Simulation source (pre-generated SUMO data)
+    "simulation_traffic":  f"gs://{GCS_BUCKET}/simulation/traffic",
 
     # Bronze (Delta Lake)
-    "bronze_traffic":   f"gs://{GCS_BUCKET}/bronze/traffic_data_raw",
-    "bronze_weather":   f"gs://{GCS_BUCKET}/bronze/weather_raw",
-    "bronze_road_info": f"gs://{GCS_BUCKET}/bronze/road_info",
+    "bronze_traffic":      f"gs://{GCS_BUCKET}/bronze/traffic",
+    "bronze_weather":      f"gs://{GCS_BUCKET}/bronze/weather",
 
     # Silver (Delta Lake)
-    "silver_traffic":   f"gs://{GCS_BUCKET}/silver/traffic_data_formatted",
+    "silver":              f"gs://{GCS_BUCKET}/silver",
 
     # Gold (Delta Lake)
-    "gold_traffic":     f"gs://{GCS_BUCKET}/gold/traffic_featured",
+    "gold":                f"gs://{GCS_BUCKET}/gold",
+
+    # Checkpoints
+    "ckpt_bronze_traffic": f"gs://{GCS_BUCKET}/checkpoints/bronze_traffic",
+    "ckpt_bronze_weather": f"gs://{GCS_BUCKET}/checkpoints/bronze_weather",
+    "ckpt_silver":         f"gs://{GCS_BUCKET}/checkpoints/silver",
+    "ckpt_gold":           f"gs://{GCS_BUCKET}/checkpoints/gold",
 }
 
-# ── Spark ─────────────────────────────────────────────────────────────────────
+# Spark
 SPARK_MASTER = os.getenv("SPARK_MASTER", "spark://master14:7077")
 
 SPARK_CONF = {
@@ -52,14 +63,20 @@ SPARK_CONF = {
     "spark.hadoop.fs.AbstractFileSystem.gs.impl":
         "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
     "spark.hadoop.fs.gs.auth.type": "APPLICATION_DEFAULT",
-    # Memory & parallelism
+    # 3 executors x 2 cores x 2 = 12 shuffle partitions
     "spark.driver.memory":          "4g",
     "spark.driver.maxResultSize":   "2g",
-    "spark.executor.instances":     "3",   # 1 executor / worker
-    "spark.executor.cores":         "2",   # fit ca 2 worker nho (2 cores)
-    "spark.executor.memory":        "5g",  # an toan cho worker 6.9GB
-    "spark.sql.shuffle.partitions": "12",  # 3 executors x 2 cores x 2
+    "spark.executor.instances":     "3",
+    "spark.executor.cores":         "2",
+    "spark.executor.memory":        "5g",
+    "spark.sql.shuffle.partitions": "12",
 }
 
-# ── Business Logic ─────────────────────────────────────────────────────────────
-CONGESTION_SPEED_THRESHOLD_KMH = 20   # dưới ngưỡng này → tắc
+# Business logic
+CONGESTION_SPEED_THRESHOLD_KMH = 20  # below this (km/h) is counted as congested
+
+# Binary paths — auto-detected; override via .env if needed
+SPARK_SUBMIT = os.getenv("SPARK_SUBMIT", shutil.which("spark-submit") or "/opt/spark/bin/spark-submit")
+UVICORN_BIN  = os.getenv("UVICORN_BIN",  str(Path(sys.executable).parent / "uvicorn"))
+NPM_BIN      = os.getenv("NPM_BIN",      shutil.which("npm") or "npm")
+FRONTEND_DIR = os.getenv("FRONTEND_DIR", str(Path(__file__).parent / "dashboard/frontend"))

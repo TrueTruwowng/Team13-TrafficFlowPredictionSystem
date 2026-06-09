@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 import { fetchJson, getApiBaseUrl } from "../lib/api";
 import type { DatasetListResponse, DatasetObject, DayDataResponse, DayRoadCountResponse } from "../lib/types";
@@ -571,20 +571,27 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
     });
   }, [rows, isTodaySelected, currentBucketIndex]);
 
+  const [isRawRefreshing, setIsRawRefreshing] = useState(false);
+
+  const refreshRawData = useCallback(async () => {
+    if (!dataPayload?.target_date) return;
+    setIsRawRefreshing(true);
+    try {
+      const params = new URLSearchParams({ target_date: dataPayload.target_date });
+      if (submittedRoad.trim()) params.set("road_name", submittedRoad.trim());
+      const fresh = await fetchJson<DayDataResponse>(
+        `${apiBase}/datasets/by-date/data?${params.toString()}`
+      );
+      setDataPayload(fresh);
+    } catch { /* silent */ }
+    finally { setIsRawRefreshing(false); }
+  }, [dataPayload?.target_date, submittedRoad, apiBase]);
+
   useEffect(() => {
     if (!isTodaySelected || !dataPayload?.target_date) return;
-    const id = setInterval(async () => {
-      try {
-        const params = new URLSearchParams({ target_date: dataPayload.target_date });
-        if (submittedRoad.trim()) params.set("road_name", submittedRoad.trim());
-        const fresh = await fetchJson<DayDataResponse>(
-          `${apiBase}/datasets/by-date/data?${params.toString()}`
-        );
-        setDataPayload(fresh);
-      } catch { /* silent */ }
-    }, 15_000);
+    const id = setInterval(() => void refreshRawData(), 15_000);
     return () => clearInterval(id);
-  }, [isTodaySelected, dataPayload?.target_date, submittedRoad, apiBase]);
+  }, [isTodaySelected, dataPayload?.target_date, refreshRawData]);
 
 
   const hourlyFlowSeries = useMemo<Array<number | null>>(() => {
@@ -1130,7 +1137,11 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
               </div>
               <div className="status-item light-status-item">
                 <div className="status-label">Backend API</div>
-                <div className="status-value">{apiBase}</div>
+                <div className="status-value">
+                  <a href={`${apiBase}/docs`} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                    {apiBase}/docs
+                  </a>
+                </div>
               </div>
               <div className="status-item light-status-item">
                 <div className="status-label">Ngày khả dụng</div>
@@ -1211,7 +1222,24 @@ export default function DashboardShell({ apiBaseUrl }: DashboardShellProps) {
 
         <section className="table-card light-card">
           <div className="flow-chart-header">
-            <span className="flow-chart-title">Lưu lượng theo thời gian</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="flow-chart-title">Lưu lượng theo thời gian</span>
+              {isTodaySelected && (
+                <button
+                  type="button"
+                  className={`refresh-btn${isRawRefreshing ? " spinning" : ""}`}
+                  disabled={isRawRefreshing}
+                  title="Làm mới dữ liệu"
+                  onClick={() => void refreshRawData()}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 4v6h-6"/>
+                    <path d="M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                </button>
+              )}
+            </div>
             {hasChartData && (
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
                 {showFlowSeries && <div className="legend-item"><span className="legend-swatch flow" /> Lưu lượng</div>}

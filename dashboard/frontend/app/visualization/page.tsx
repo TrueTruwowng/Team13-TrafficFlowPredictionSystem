@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchJson, getApiBaseUrl } from "../../lib/api";
 import type { ForecastLayerResponse, ForecastStatusResponse, LatestLayerDataResponse, LayerDatesResponse, MapGeometryResponse, RealtimeLayerDataResponse } from "../../lib/types";
@@ -286,6 +286,7 @@ function findRangeForFeature(feature: MapGeometryResponse["features"][number], r
 export default function VisualizationPage() {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const realtimeLoadRef = useRef<(() => void) | null>(null);
   const [mapGeometry, setMapGeometry] = useState<MapGeometryResponse | null>(null);
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>("historical");
   const [dates, setDates] = useState<string[]>([]);
@@ -432,12 +433,14 @@ export default function VisualizationPage() {
       }
     }
 
+    realtimeLoadRef.current = loadRealtimeData;
     setDataState("loading");
     void loadRealtimeData();
     const intervalId = window.setInterval(() => void loadRealtimeData(), realtimeIntervalSeconds * 1_000);
 
     return () => {
       isCancelled = true;
+      realtimeLoadRef.current = null;
       window.clearInterval(intervalId);
     };
   }, [realtimeIntervalSeconds, visualizationMode]);
@@ -737,6 +740,19 @@ export default function VisualizationPage() {
             <div className="visualization-live-status">
               <strong>{dataState === "loading" ? "Đang tải dữ liệu trực tiếp..." : `Mốc mới nhất của dữ liệu: ${minuteToTimeInput(sliderMinute)}`}</strong>
               <span>{lastRealtimeUpdate ? `Cập nhật: ${lastRealtimeUpdate.toLocaleTimeString("vi-VN")}` : "Chưa có lần cập nhật nào"}</span>
+              <button
+                type="button"
+                className={`refresh-btn${dataState === "loading" ? " spinning" : ""}`}
+                disabled={dataState === "loading"}
+                title="Làm mới dữ liệu"
+                onClick={() => realtimeLoadRef.current?.()}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
               <label className="realtime-interval-field">
                 <span>Chu kỳ cập nhật</span>
                 <select value={realtimeIntervalOption} onChange={(event) => setRealtimeIntervalOption(event.target.value as RealtimeIntervalOption)}>

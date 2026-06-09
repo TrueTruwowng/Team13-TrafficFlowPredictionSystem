@@ -1,15 +1,11 @@
-"""
-Batch backfill for a single missing date.
-
-Reads simulation traffic JSON directly from GCS (no Kafka),
-fetches historical weather from Open-Meteo Archive API if missing,
-then applies the full bronze → silver → gold pipeline and MERGEs
-results into the existing Delta tables.
-
-Usage:
-    spark-submit --packages io.delta:delta-spark_2.12:3.2.0 \\
-        /home/dis/Project/backfill.py 2026-05-27
-"""
+# Batch backfill for a single missing date.
+#
+# Reads simulation traffic JSON directly from GCS (no Kafka),
+# fetches historical weather from Open-Meteo Archive if missing,
+# then runs bronze → silver → gold and MERGEs results into Delta tables.
+#
+# Usage:
+#   spark-submit --packages io.delta:delta-spark_2.12:3.2.0 backfill.py 2026-05-27
 
 import csv
 import os
@@ -25,7 +21,7 @@ from pyspark.sql.types import (
 )
 
 from Bronze.bronze_processing import _transform_traffic, traffic_landing_schema
-from config import CONGESTION_SPEED_THRESHOLD_KMH, GCS_BUCKET
+from config import CONGESTION_SPEED_THRESHOLD_KMH, GCS_PATHS, GCS_BUCKET
 from spark_session import get_spark
 from utils.api_utils import WeatherAPI
 
@@ -38,15 +34,15 @@ if len(sys.argv) < 2:
 TARGET_DATE = sys.argv[1]
 
 CONGESTION_SPEED_THRESHOLD = CONGESTION_SPEED_THRESHOLD_KMH / 3.6
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-LOOKUP_PATH = os.path.join(PROJECT_DIR, "data", "road_lookup_table.csv")
+PROJECT_DIR    = os.path.dirname(os.path.abspath(__file__))
+LOOKUP_PATH    = os.path.join(PROJECT_DIR, "data", "road_lookup_table.csv")
 
-TRAFFIC_BRONZE = f"gs://{GCS_BUCKET}/bronze/traffic"
-WEATHER_BRONZE = f"gs://{GCS_BUCKET}/bronze/weather"
-SILVER_PATH    = f"gs://{GCS_BUCKET}/silver"
-GOLD_PATH      = f"gs://{GCS_BUCKET}/gold"
+TRAFFIC_BRONZE = GCS_PATHS["bronze_traffic"]
+WEATHER_BRONZE = GCS_PATHS["bronze_weather"]
+SILVER_PATH    = GCS_PATHS["silver"]
+GOLD_PATH      = GCS_PATHS["gold"]
 
-# Schema cho weather DataFrame khớp với bronze/weather Delta schema
+# Schema matching bronze/weather Delta table
 _WEATHER_SCHEMA = StructType([
     StructField("road_id",         StringType(),  True),
     StructField("road_name",       StringType(),  True),
@@ -68,23 +64,16 @@ def _load_roads() -> list[dict]:
             if r["name"] in seen:
                 continue
             seen.add(r["name"])
-            roads.append({
-                "id":  r["way_id"],
-                "name": r["name"],
-                "lat": float(r["lat"]),
-                "lon": float(r["lon"]),
-            })
+            roads.append({"id": r["way_id"], "name": r["name"],
+                           "lat": float(r["lat"]), "lon": float(r["lon"])})
     return roads
 
 
 def _fetch_weather_records(target_date: str) -> list[dict]:
-    """
-    Fetch hourly weather from Open-Meteo Archive for every road on target_date.
-    Returns a list of dicts compatible with _WEATHER_SCHEMA.
-    """
-    api   = WeatherAPI()
-    roads = _load_roads()
-    now_s = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    """Fetch hourly weather from Open-Meteo Archive for all roads on target_date."""
+    api     = WeatherAPI()
+    roads   = _load_roads()
+    now_s   = datetime.now().strftime("%Y-%m-%dT%H:%M")
     records = []
 
     for road in roads:
@@ -94,7 +83,7 @@ def _fetch_weather_records(target_date: str) -> list[dict]:
             records.append({
                 "road_id":         road["id"],
                 "road_name":       road["name"],
-                "datetime":        h["datetime"],        # "2026-05-27T07:00"
+                "datetime":        h["datetime"],
                 "temperature":     h.get("temperature"),
                 "windspeed":       h.get("windspeed"),
                 "humidity":        int(raw_humidity) if raw_humidity is not None else None,
@@ -116,8 +105,8 @@ def backfill(target_date: str):
     print(f"[backfill] Starting backfill for {target_date}", flush=True)
     print(f"{'='*60}\n", flush=True)
 
-    # ── 1. BRONZE / TRAFFIC ───────────────────────────────────────────────────
-    sim_path = f"gs://{GCS_BUCKET}/simulation/traffic/{target_date}/*.json"
+    # 1. Bronze / traffic
+    sim_path = f"{GCS_PATHS['simulation_traffic']}/{target_date}/*.json"
     print(f"[bronze/traffic] Reading {sim_path}", flush=True)
 
     traffic_raw    = spark.read.schema(traffic_landing_schema).json(sim_path)
@@ -127,7 +116,7 @@ def backfill(target_date: str):
     print(f"[bronze/traffic] {count_bt} rows read from simulation", flush=True)
 
     if count_bt == 0:
-        print(f"[bronze/traffic] ERROR: No simulation data found at {sim_path}", flush=True)
+        print(f"[bronze/traffic] ERROR: No simulation data at {sim_path}", flush=True)
         spark.stop()
         sys.exit(1)
 
@@ -154,10 +143,9 @@ def backfill(target_date: str):
     traffic_bronze.unpersist()
     print(f"[bronze/traffic] Done: {count_bt} rows → delta", flush=True)
 
-    # ── 2. BRONZE / WEATHER (fetch from archive if hourly weather missing) ────
-    # Silver join floor weather_time xuong HH:00, nen can weather o moc HH:00.
-    # Streaming weather chi co moc HH:03/HH:06… → KHONG khop. Vi vay phai kiem
-    # tra rieng moc HH:00 (archive) thay vi chi dem so dong > 0.
+    # 2. Bronze / weather
+    # Archive API returns hourly data at HH:00. Silver join floors weather_time to
+    # HH:00 for backfill (vs 3-minute intervals in streaming), so check HH:00 rows.
     try:
         hourly_w = (
             spark.read.format("delta").load(WEATHER_BRONZE)
@@ -169,12 +157,12 @@ def backfill(target_date: str):
         hourly_w = 0
 
     if hourly_w > 0:
-        print(f"[bronze/weather] Already has {hourly_w} hourly rows for {target_date}, skipping fetch", flush=True)
+        print(f"[bronze/weather] Already has {hourly_w} hourly rows for {target_date}, skipping", flush=True)
     else:
-        print(f"[bronze/weather] No hourly weather for {target_date}, fetching from Open-Meteo Archive…", flush=True)
+        print(f"[bronze/weather] No hourly weather for {target_date}, fetching from archive…", flush=True)
         w_records = _fetch_weather_records(target_date)
         if not w_records:
-            print("[bronze/weather] ERROR: Archive fetch returned 0 records. Aborting.", flush=True)
+            print("[bronze/weather] ERROR: Archive returned 0 records. Aborting.", flush=True)
             spark.stop()
             sys.exit(1)
 
@@ -202,14 +190,12 @@ def backfill(target_date: str):
             )
         print(f"[bronze/weather] Done: {len(w_records)} rows → delta", flush=True)
 
-    # ── 3. SILVER ─────────────────────────────────────────────────────────────
-    # Bronze/weather từ archive API là hourly (HH:00), nên floor weather_time
-    # xuống giờ (thay vì 3 phút như streaming pipeline) để join khớp.
+    # 3. Silver
+    # Archive weather is hourly (HH:00) so floor weather_time to HH:00 here,
+    # not the 3-minute floor used in the streaming pipeline.
     traffic_for_silver = (
         spark.read.format("delta").load(TRAFFIC_BRONZE)
         .filter(F.col("date") == target_date)
-        # Loai edge khong co ten trong OSM (road_name null) — junk, tranh row
-        # rac voi peak/min null vi khong join duoc tren road_name null.
         .filter(F.col("road_name").isNotNull())
         .withColumn(
             "weather_time",
@@ -228,20 +214,17 @@ def backfill(target_date: str):
         .withColumnRenamed("datetime",  "w_datetime")
     )
 
-    # LEFT JOIN: giu lai moi traffic interval ke ca khi thieu weather gio do.
     joined = (
         traffic_for_silver
         .join(
             weather_for_silver,
-            (traffic_for_silver["road_name"]   == weather_for_silver["w_road_name"]) &
+            (traffic_for_silver["road_name"]    == weather_for_silver["w_road_name"]) &
             (traffic_for_silver["weather_time"] == weather_for_silver["w_datetime"]),
             how="left",
         )
         .drop("w_road_name", "w_datetime", "weather_time")
     )
 
-    # Silver muc 3 PHUT (giong silver_processing.py live): gom cac lane → 1 dong
-    # / (road_name, moc 3 phut). KHONG tinh peak/min o silver — de gold tinh.
     silver_df = (
         joined
         .groupBy("road_name", "recordDatetime")
@@ -261,23 +244,21 @@ def backfill(target_date: str):
             F.first("weather").alias("weather"),
         )
         .withColumn("date", F.to_date("recordDatetime", "yyyy-MM-dd'T'HH:mm"))
-        # Loai cac dong bi cuon sang ngay khac (vd interval 24:00 → 00:00 hom sau)
-        # de thoa man replaceWhere theo dung partition `date`.
+        # Drop rows that spill into the next day (e.g. interval ending at 24:00 → 00:00).
         .filter(F.col("date") == F.lit(target_date))
     )
 
     silver_df.cache()
     count_s = silver_df.count()
-    print(f"[silver] {count_s} rows after join + aggregation (3-min)", flush=True)
+    print(f"[silver] {count_s} rows after join + aggregation", flush=True)
 
     if count_s == 0:
-        print("[silver] ERROR: 0 rows after weather join. Check weather data covers this date.", flush=True)
+        print("[silver] ERROR: 0 rows. Check that weather covers this date.", flush=True)
         silver_df.unpersist()
         spark.stop()
         sys.exit(1)
 
-    # Ghi de partition `date` (replaceWhere) → thay sach moi dinh dang cu (vd
-    # hourly) bang dinh dang 3 phut, atomic, khong de lai dong rac.
+    # replaceWhere atomically replaces the date partition, cleaning up any stale schema.
     silver_writer = (
         silver_df.write
         .format("delta")
@@ -291,15 +272,12 @@ def backfill(target_date: str):
     silver_df.unpersist()
     print(f"[silver] Done: {count_s} rows → delta (replaceWhere {target_date})", flush=True)
 
-    # ── 4. GOLD ───────────────────────────────────────────────────────────────
-    # Giong gold_processing.py live: giu mức 3 phut, peakFlow/minFlow = max/min
-    # cua avg_flow theo (road, date, hour), actualFlow = avg_flow tai moc do.
+    # 4. Gold
     ts_col = F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm")
     silver_day = (
         spark.read.format("delta").load(SILVER_PATH)
         .filter(F.col("date") == target_date)
-        # Bo cot peak/min ton du tu schema hourly cu (neu co) — gold tu tinh lai,
-        # tranh AMBIGUOUS_REFERENCE khi join voi hourly_stats.
+        # Drop stale peak/min columns from old hourly schema to avoid AMBIGUOUS_REFERENCE.
         .drop("peakFlow", "minFlow")
         .withColumn("hour", F.hour(ts_col))
     )
