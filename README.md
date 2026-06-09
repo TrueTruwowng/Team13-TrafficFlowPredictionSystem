@@ -150,9 +150,8 @@ bash stop.sh        # stop infrastructure
 | View | Screenshot |
 |---|---|
 | Main dashboard | `docs/screenshots/main_dashboard.png` |
-| Congestion map | `docs/screenshots/visualization_map.png` |
-| Realtime chart | `docs/screenshots/realtime.png` |
-| Dark mode | `docs/screenshots/dark_mode.png` |
+| Congestion Forecast Map | `docs/screenshots/visualization_map.png` |
+| Realtime Map | `docs/screenshots/realtime.png` |
 | Grafana metrics | `docs/screenshots/grafana.png` |
 
 ---
