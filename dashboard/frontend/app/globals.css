@@ -1375,6 +1375,54 @@ tbody tr:nth-child(even) td {
   pointer-events: none;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.09);
+  transform: scale(1.1);
+}
+
+.refresh-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.refresh-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.refresh-btn.spinning svg {
+  animation: spin 0.7s linear infinite;
+}
+
+html[data-theme="dark"] .refresh-btn {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }

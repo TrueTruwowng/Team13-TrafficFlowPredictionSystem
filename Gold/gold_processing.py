@@ -7,17 +7,17 @@ from pyspark.sql import DataFrame, functions as F
 from dotenv import load_dotenv
 
 from spark_session import get_spark
-from config import GCS_BUCKET, CONGESTION_SPEED_THRESHOLD_KMH
+from config import GCS_PATHS, CONGESTION_SPEED_THRESHOLD_KMH
 
 load_dotenv()
 
-spark = None  # injected via start_streams(); created locally when run standalone
+spark = None
 
-SILVER_PATH = f"gs://{GCS_BUCKET}/silver"
-GOLD_PATH   = f"gs://{GCS_BUCKET}/gold"
-GOLD_CKPT   = f"gs://{GCS_BUCKET}/checkpoints/gold"
+SILVER_PATH = GCS_PATHS["silver"]
+GOLD_PATH   = GCS_PATHS["gold"]
+GOLD_CKPT   = GCS_PATHS["ckpt_gold"]
 
-# SUMO tra toc do theo m/s, config dinh nghia nguong theo km/h
+# SUMO reports speed in m/s; threshold is defined in km/h.
 CONGESTION_SPEED_THRESHOLD = CONGESTION_SPEED_THRESHOLD_KMH / 3.6
 
 
@@ -26,10 +26,8 @@ def _write_gold_batch(batch_df: DataFrame, batch_id: int):
         return
 
     try:
-        # batch_df da duoc aggregate o silver: 1 dong / (road_name, recordDatetime)
-        # Lay cac (road_name, date, hour) bi anh huong de tinh peakFlow/minFlow trong gio
         ts_col = F.to_timestamp("recordDatetime", "yyyy-MM-dd'T'HH:mm")
-        batch_with_hour = batch_df.withColumn("hour", F.hour(ts_col))
+        batch_with_hour   = batch_df.withColumn("hour", F.hour(ts_col))
         affected_road_hours = batch_with_hour.select("road_name", "date", "hour").distinct()
         date_list = [r["date"] for r in affected_road_hours.select("date").distinct().collect()]
 
@@ -40,7 +38,8 @@ def _write_gold_batch(batch_df: DataFrame, batch_id: int):
             .join(affected_road_hours, on=["road_name", "date", "hour"], how="inner")
         )
 
-        # Tinh peakFlow / minFlow theo gio cho tung tuyen duong (cap nhat moi 3p trong gio)
+        # peakFlow/minFlow = max/min avg_flow within the same (road, date, hour).
+        # Recomputed on every batch so earlier intervals in the hour get updated values.
         hourly_stats = (
             silver_all
             .groupBy("road_name", "date", "hour")
@@ -76,7 +75,7 @@ def _write_gold_batch(batch_df: DataFrame, batch_id: int):
         gold_exists = DeltaTable.isDeltaTable(batch_df.sparkSession, GOLD_PATH)
 
         if gold_exists:
-            # Re-apply updated peakFlow/minFlow to existing Gold records in the same hours
+            # Re-apply updated peakFlow/minFlow to existing Gold rows in the same hours.
             affected_rn = affected_road_hours.withColumnRenamed("road_name", "roadName")
             existing_gold = (
                 batch_df.sparkSession.read.format("delta").load(GOLD_PATH)
@@ -86,7 +85,7 @@ def _write_gold_batch(batch_df: DataFrame, batch_id: int):
                 .join(
                     new_gold.select("roadName", "date", "recordDatetime"),
                     on=["roadName", "date", "recordDatetime"],
-                    how="left_anti",  # exclude records already in new_gold
+                    how="left_anti",
                 )
                 .drop("peakFlow", "minFlow")
                 .join(hourly_stats_rn, on=["roadName", "date", "hour"], how="left")
@@ -129,7 +128,6 @@ def _write_gold_batch(batch_df: DataFrame, batch_id: int):
 
 
 def _wait_for_delta(path: str, spark_session=None, retries: int = 40, delay: int = 30) -> None:
-    """Block until a Delta table exists and has a committed schema."""
     import time
     s = spark_session or spark
     for i in range(1, retries + 1):

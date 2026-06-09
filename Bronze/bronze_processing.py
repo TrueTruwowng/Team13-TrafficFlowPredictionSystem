@@ -12,20 +12,20 @@ from pyspark.sql.types import (
 from dotenv import load_dotenv
 
 from spark_session import get_spark
-from config import GCS_BUCKET
+from config import GCS_PATHS
 
 load_dotenv()
 
-spark = None  # injected via start_streams(); created locally when run standalone
+spark = None
 
-TRAFFIC_LANDING = f"gs://{GCS_BUCKET}/landing/traffic/*/*.json"
-WEATHER_LANDING = f"gs://{GCS_BUCKET}/landing/weather/*/*.json"
-TRAFFIC_BRONZE  = f"gs://{GCS_BUCKET}/bronze/traffic"
-WEATHER_BRONZE  = f"gs://{GCS_BUCKET}/bronze/weather"
-TRAFFIC_CKPT    = f"gs://{GCS_BUCKET}/checkpoints/bronze_traffic"
-WEATHER_CKPT    = f"gs://{GCS_BUCKET}/checkpoints/bronze_weather"
+TRAFFIC_LANDING = GCS_PATHS["landing_traffic"] + "/*/*.json"
+WEATHER_LANDING = GCS_PATHS["landing_weather"] + "/*/*.json"
+TRAFFIC_BRONZE  = GCS_PATHS["bronze_traffic"]
+WEATHER_BRONZE  = GCS_PATHS["bronze_weather"]
+TRAFFIC_CKPT    = GCS_PATHS["ckpt_bronze_traffic"]
+WEATHER_CKPT    = GCS_PATHS["ckpt_bronze_weather"]
 
-# ── Schemas ────────────────────────────────────────────────────────────────────
+# Schemas
 
 traffic_landing_schema = StructType([
     StructField("id",             StringType(), True),
@@ -60,7 +60,7 @@ weather_landing_schema = StructType([
     StructField("ingestion_time", StringType(),  True),
 ])
 
-# ── Transform helpers ──────────────────────────────────────────────────────────
+# Transform helpers
 
 def _transform_traffic(df: DataFrame) -> DataFrame:
     return df.select(
@@ -102,15 +102,14 @@ def _transform_weather(df: DataFrame) -> DataFrame:
         F.col("date"),
     )
 
-# ── foreachBatch handlers ──────────────────────────────────────────────────────
+# foreachBatch handlers
 
 def _write_traffic_batch(batch_df: DataFrame, batch_id: int):
     if batch_df.isEmpty():
         return
     count = batch_df.count()
-    typed = _transform_traffic(batch_df)
     (
-        typed.write
+        _transform_traffic(batch_df).write
         .format("delta")
         .mode("append")
         .option("mergeSchema", "true")
@@ -134,7 +133,7 @@ def _write_weather_batch(batch_df: DataFrame, batch_id: int):
     )
     print(f"[bronze/weather] batch {batch_id}: {count} rows → delta", flush=True)
 
-# ── Streaming queries ──────────────────────────────────────────────────────────
+# Streaming queries
 
 def start_streams(spark_session):
     """Start bronze traffic + weather streams. Does NOT block."""
@@ -145,6 +144,8 @@ def start_streams(spark_session):
         spark.readStream
         .schema(traffic_landing_schema)
         .option("recursiveFileLookup", "true")
+        # Cap micro-batch size to avoid OOM on catch-up; steady-state ~1 file/3min.
+        .option("maxFilesPerTrigger", "200")
         .json(TRAFFIC_LANDING)
         .withColumn("recordDatetime",
             F.concat(F.col("date"), F.lit("T"), F.col("end")).cast("timestamp"))
@@ -155,6 +156,7 @@ def start_streams(spark_session):
         spark.readStream
         .schema(weather_landing_schema)
         .option("recursiveFileLookup", "true")
+        .option("maxFilesPerTrigger", "200")
         .json(WEATHER_LANDING)
         .withColumn("datetime",
             F.concat(F.col("date"), F.lit("T"), F.col("end")).cast("timestamp"))
@@ -164,13 +166,13 @@ def start_streams(spark_session):
     traffic_stream.writeStream \
         .foreachBatch(_write_traffic_batch) \
         .option("checkpointLocation", TRAFFIC_CKPT) \
-        .trigger(processingTime="3 minutes") \
+        .trigger(processingTime="60 seconds") \
         .start()
 
     weather_stream.writeStream \
         .foreachBatch(_write_weather_batch) \
         .option("checkpointLocation", WEATHER_CKPT) \
-        .trigger(processingTime="3 minutes") \
+        .trigger(processingTime="60 seconds") \
         .start()
 
 

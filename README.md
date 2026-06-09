@@ -1,96 +1,166 @@
-# Team13-TrafficFlowPredictionSystem
+# Real-Time Traffic Monitoring Pipeline
 
-# TrafficFlow Dashboard
+A near real-time traffic monitoring system for urban road networks in Hanoi, Vietnam.
 
-Khung FE/BE cho dashboard traffic:
+> **This project is developed for educational purposes**
 
-- `backend/`: FastAPI + DuckDB, đọc parquet từ Google Cloud Storage.
-- `frontend/`: Next.js app router, gọi API backend để hiển thị dữ liệu.
-- `docker-compose.yml`: dựng cả FE và BE cùng lúc.
+---
 
-## Cấu trúc
+## Team
 
-```text
-dashboard/
-  backend/
-    app/
-      core/
-      db/
-      routers/
-      services/
-      main.py
-    requirements.txt
-    .env.example
-      Dockerfile
-  frontend/
-      app/
-      components/
-      lib/
-      package.json
-      tsconfig.json
-    .env.example
-      Dockerfile
-    docker-compose.yml
+Bui Manh Nam - 23020556 
+
+Chu Anh Truong - 23020577 
+
+Nong Son Tung - 23020571 
+
+Pham Quang Vinh - 23020580 
+
+Nguyen Quang Vinh - 23020579
+
+**University:** VNU University of Engineering and Technology (UET)
+
+---
+
+## Description
+
+This system monitors traffic flow, congestion levels, and weather conditions across multiple roads in Hanoi in near real-time. It provides:
+
+- A live dashboard showing current traffic status, vehicle counts, average speeds, and weather
+- Historical data browsing and comparison across dates and roads
+- Traffic flow forecasting using machine learning models
+- An interactive road map with congestion color coding
+
+**Tech stack:** Apache Kafka · Apache Spark · Delta Lake · Google Cloud Storage · FastAPI · Next.js 15 · Prometheus · Grafana · Docker
+
+---
+
+## Prerequisites
+
+- Java 11 or 17
+- Apache Kafka 3.x (KRaft mode, 3-node cluster)
+- Apache Spark 3.5.1
+- Python 3.12+
+- Node.js 18+
+- Docker + Docker Compose
+- A Google Cloud Storage bucket with write access
+
+---
+
+## Installation
+
+### 1. Clone
+
+```bash
+git clone <repo-url>
+cd Project
 ```
 
-  ## Chạy bằng Docker Compose
+### 2. Python environment
 
-  ```powershell
-  cd e:\TrafficFlow\dashboard
-  docker compose up --build -d
-  ```
+```bash
+# Pipeline dependencies
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-  Lần sau khi chỉ sửa source code, chạy:
-
-  ```powershell
-  docker compose up -d
-  ```
-
-  Theo dõi log hot-reload:
-
-  ```powershell
-  docker compose logs -f backend frontend
-  ```
-
-  Lưu ý: không cần `--build` mỗi lần sửa code. Chỉ dùng `--build` khi thay đổi Dockerfile hoặc dependency (`requirements.txt`, `package.json`).
-
-  Sau đó:
-
-  - Frontend: `http://localhost:3000`
-  - Backend: `http://localhost:8000`
-
-  ## Chạy backend riêng
-
-```powershell
-cd e:\TrafficFlow\dashboard\backend
-e:/TrafficFlow/.venv/Scripts/python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Dashboard backend dependencies
+pip install -r dashboard/backend/requirements.txt
 ```
 
-  ## Chạy frontend riêng
+### 3. Frontend
 
-  ```powershell
-  cd e:\TrafficFlow\dashboard\frontend
-  npm install
-  npm run dev
-  ```
+```bash
+cd dashboard/frontend
+npm install
+npm run build
+cd ../..
+```
 
-## Biến môi trường backend
+### 4. Environment variables
 
-- `GCS_BUCKET`: tên bucket Google Cloud Storage.
-- `GCS_PREFIX`: prefix thư mục dữ liệu trong bucket.
-- `GCP_PROJECT`: project id, nếu cần cho `google-cloud-storage`.
-- `DUCKDB_PATH`: đường dẫn DB DuckDB local, mặc định in-memory.
-- `CORS_ORIGINS`: danh sách origin cho Next.js, mặc định `http://localhost:3000,http://127.0.0.1:3000`.
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
 
-Backend sẽ tự đọc file `dashboard/backend/.env` khi khởi động.
+Key variables:
 
-## Biến môi trường frontend
+| Variable | Description |
+|---|---|
+| `KAFKA_CLUSTER_ID` | KRaft cluster ID — generate with `kafka-storage.sh random-uuid` |
+| `KAFKA_BOOTSTRAP_SERVERS` | e.g. `master:9092` |
+| `SPARK_MASTER` | e.g. `spark://master:7077` |
+| `GCS_BUCKET_NAME` | Your GCS bucket name |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to GCP service account key (omit if using ADC) |
 
-- `NEXT_PUBLIC_API_BASE_URL`: URL backend, mặc định `http://localhost:8000`.
+Binary paths (`SPARK_SUBMIT`, `UVICORN_BIN`, `NPM_BIN`) are auto-detected at runtime. Override in `.env` only if auto-detection fails.
 
-## API theo ngày
+### 5. SUMO simulation data (one-time)
 
-- `GET /datasets/by-date?target_date=2026-05-29`
-- `GET /datasets/by-date/data?target_date=2026-05-29` (trả toàn bộ rows của ngày đó)
-- `GET /datasets/by-range?start_date=2026-05-01&end_date=2026-05-07`
+```bash
+python Landing/retrieve_sumo_traffic.py
+# or for a specific date range:
+python Landing/retrieve_sumo_traffic.py --start-date 2026-05-01 --end-date 2026-05-31
+```
 
+---
+
+## Running
+
+### Step 1 — Start infrastructure (Kafka + Spark + Docker)
+
+```bash
+bash run.sh
+```
+
+### Step 2 — Start the pipeline
+
+```bash
+source venv/bin/activate
+python main.py              # today's data
+python main.py 2026-05-27   # replay a specific date
+```
+
+### Stop
+
+```bash
+Ctrl+C              # stop pipeline
+bash stop.sh        # stop infrastructure
+```
+
+---
+
+## Web Interfaces
+
+| Interface | URL |
+|---|---|
+| Dashboard | `http://<master-ip>:3000` |
+| API docs | `http://<master-ip>:8001/docs` |
+| Spark UI | `http://<master-ip>:8080` |
+| Kafka UI | `http://<master-ip>:8085` |
+| Grafana | `http://<master-ip>:3001` |
+| Prometheus | `http://<master-ip>:9090` |
+
+---
+
+## Demo
+
+
+| View | Screenshot |
+|---|---|
+| Main dashboard | `docs/screenshots/main_dashboard.png` |
+| Congestion Forecast Map | `docs/screenshots/visualization_map.png` |
+| Realtime Map | `docs/screenshots/realtime.png` |
+| Grafana metrics | `docs/screenshots/grafana.png` |
+
+---
+
+## Backfill
+
+Process a past date the pipeline missed:
+
+```bash
+source venv/bin/activate
+spark-submit --packages io.delta:delta-spark_2.12:3.2.0 backfill.py 2026-05-27
+```

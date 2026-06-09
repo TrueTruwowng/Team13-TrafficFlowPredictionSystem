@@ -55,7 +55,7 @@ def fetch_day(api: WeatherAPI, bucket, roads: list[dict], target_date: date):
     blob      = bucket.blob(blob_path)
 
     if blob.exists():
-        logger.debug(f"Đã có: {blob_path}")
+        logger.debug(f"Already exists: {blob_path}")
         return
 
     all_records = []
@@ -67,7 +67,7 @@ def fetch_day(api: WeatherAPI, bucket, roads: list[dict], target_date: date):
             end_date   = target_date,
         )
         if not records:
-            logger.warning(f"Không có dữ liệu cho {road['name']} ngày {target_date}")
+            logger.warning(f"No data for {road['name']} on {target_date}")
             continue
         for r in records:
             r["road_id"]   = road["id"]
@@ -85,7 +85,7 @@ def fetch_day(api: WeatherAPI, bucket, roads: list[dict], target_date: date):
 
 
 def run():
-    """Chạy 1 lần rồi thoát — Airflow lo schedule."""
+    """Run once and exit — meant to be scheduled externally."""
     api    = WeatherAPI()
     bucket = get_bucket()
     roads  = _load_roads()
@@ -95,7 +95,7 @@ def run():
     from_date    = last_fetched + timedelta(days=1)
 
     if from_date > end_date:
-        logger.info(f"Đã cập nhật đến {last_fetched}, không có ngày mới.")
+        logger.info(f"Already up to date through {last_fetched}.")
         return
 
     logger.info(f"Fetching {from_date} → {end_date} ({len(roads)} roads)...")

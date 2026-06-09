@@ -1,41 +1,45 @@
-### Separate script to retrieve SUMO traffic data, parse it, and store in GCS as JSON for Kafka to pick up. Run after SUMO finishes.
+# Parses SUMO XML output files from GCS, extracts per-interval edge data,
+# and uploads JSON files to simulation/traffic/ for the replay script.
+# Run once after SUMO finishes generating output files.
+
 import json
 import os
-import sys
 import re
+import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from loguru import logger
+
 from dotenv import load_dotenv
+from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import GCS_BUCKET
+from config import GCS_BUCKET, GCS_PATHS
 
 load_dotenv()
 
-BUCKET_NAME        = os.getenv("GCS_BUCKET_NAME")
-GCS_PREFIX         = "simulation/traffic"
-CHECKPOINT_BLOB    = f"{GCS_PREFIX}/_checkpoint.json"
-OSM_FILE           = "/home/dis/sumo_project/nghia_do_cut.osm.xml"
-SOURCE_BUCKET_NAME = "big-data-storage13"
-SOURCE_PREFIX      = "output_sumo"
+BUCKET_NAME     = os.getenv("GCS_BUCKET_NAME")
+GCS_PREFIX      = GCS_PATHS["simulation_traffic"].removeprefix(f"gs://{GCS_BUCKET}/")
+CHECKPOINT_BLOB = f"{GCS_PREFIX}/_checkpoint.json"
+OSM_FILE        = "/home/dis/sumo_project/nghia_do_cut.osm.xml"
+SOURCE_BUCKET   = GCS_BUCKET
+SOURCE_PREFIX   = "output_sumo"
 
 if not BUCKET_NAME:
-    logger.critical("Thiếu GCS_BUCKET_NAME!")
+    logger.critical("Missing GCS_BUCKET_NAME")
     sys.exit(1)
 
 
 def _get_buckets():
     from google.cloud import storage
     client = storage.Client()
-    return client.bucket(GCS_BUCKET), client.bucket(SOURCE_BUCKET_NAME)
+    return client.bucket(GCS_BUCKET), client.bucket(SOURCE_BUCKET)
 
 
 def _parse_date_from_filename(filename: str) -> str:
     """'test_01-05-2026_output.xml' → '2026-05-01'"""
     m = re.search(r"(\d{2}-\d{2}-\d{4})", filename)
     if not m:
-        raise ValueError(f"Không tìm thấy ngày trong tên file: {filename}")
+        raise ValueError(f"No date found in filename: {filename}")
     return datetime.strptime(m.group(1), "%d-%m-%Y").strftime("%Y-%m-%d")
 
 
@@ -54,8 +58,8 @@ def _write_checkpoint(bucket, processed: set):
 
 
 def _build_edge_name_map(osm_path: str):
-    tree = ET.parse(osm_path)
-    root = tree.getroot()
+    tree      = ET.parse(osm_path)
+    root      = tree.getroot()
     way_names = {}
     for way in root.findall("way"):
         name_tag = way.find("tag[@k='name']")
@@ -74,13 +78,12 @@ def _to_hhmm(seconds: str) -> str:
 
 
 def _hhmm_to_compact(hhmm: str) -> str:
-    """'06:30' → '0630' dùng cho tên file"""
     return hhmm.replace(":", "")
 
 
 def _process_file(xml_path: str, date_str: str,
                   way_names: dict, edge_to_way, bucket) -> bool:
-    """Iterparse toàn bộ XML, ghi thẳng mỗi interval lên GCS simulation/traffic/."""
+    """Iterparse the XML and upload each interval directly to GCS."""
     total_intervals = 0
 
     try:
@@ -88,10 +91,8 @@ def _process_file(xml_path: str, date_str: str,
             if elem.tag != "interval":
                 continue
 
-            begin_s = elem.get("begin")
-            end_s   = elem.get("end")
-            begin   = _to_hhmm(begin_s)
-            end     = _to_hhmm(end_s)
+            begin = _to_hhmm(elem.get("begin"))
+            end   = _to_hhmm(elem.get("end"))
 
             records = []
             for edge in elem.findall("edge"):
@@ -120,7 +121,7 @@ def _process_file(xml_path: str, date_str: str,
             logger.info(f"  [{date_str} {begin}→{end}] {len(records)} edges → {gcs_path}")
 
     except ET.ParseError as e:
-        logger.error(f"XML lỗi/chưa ghi xong: {os.path.basename(xml_path)} ({e})")
+        logger.error(f"XML parse error: {os.path.basename(xml_path)} ({e})")
         return False
 
     logger.info(f"Done {date_str}: {total_intervals} intervals")
@@ -128,16 +129,15 @@ def _process_file(xml_path: str, date_str: str,
 
 
 def _select_date_range(blobs: list, start_date: str | None, end_date: str | None) -> list:
-    """Lọc blobs theo khoảng ngày [start_date, end_date] (YYYY-MM-DD, bao gồm 2 đầu).
-    None ở đầu nào thì không giới hạn đầu đó."""
-    def _parse_bound(d: str, name: str):
+    """Filter blobs to [start_date, end_date] (inclusive). None means no bound."""
+    def _parse(d, name):
         try:
             return datetime.strptime(d, "%Y-%m-%d").date()
         except ValueError:
-            raise ValueError(f"{name} phải theo định dạng YYYY-MM-DD, nhận được: {d!r}")
+            raise ValueError(f"{name} must be YYYY-MM-DD, got: {d!r}")
 
-    lo = _parse_bound(start_date, "start_date") if start_date else None
-    hi = _parse_bound(end_date,   "end_date")   if end_date   else None
+    lo = _parse(start_date, "start_date") if start_date else None
+    hi = _parse(end_date,   "end_date")   if end_date   else None
     if lo is None and hi is None:
         return blobs
 
@@ -156,15 +156,7 @@ def _select_date_range(blobs: list, start_date: str | None, end_date: str | None
 
 def retrieve_sumo_traffic(start_date: str | None = None, end_date: str | None = None,
                           overwrite: bool = False):
-    """Chạy 1 lần rồi thoát — Airflow lo schedule.
-
-    Args:
-        start_date: Ngày bắt đầu chia khoảng (YYYY-MM-DD). Bỏ qua các file trước ngày này.
-                    None = không giới hạn đầu dưới.
-        end_date:   Ngày kết thúc (YYYY-MM-DD, bao gồm). Bỏ qua các file sau ngày này.
-                    None = không giới hạn đầu trên.
-        overwrite:  True = xử lý lại và ghi đè ngay cả khi file đã có trong checkpoint.
-    """
+    """Parse pending SUMO XML files and upload intervals to GCS. Run-once script."""
     import tempfile
     dest_bucket, src_bucket = _get_buckets()
     processed = _read_checkpoint(dest_bucket)
@@ -173,7 +165,7 @@ def retrieve_sumo_traffic(start_date: str | None = None, end_date: str | None = 
         b for b in src_bucket.list_blobs(prefix=SOURCE_PREFIX)
         if b.name.endswith("_output.xml")
     ]
-    blobs = _select_date_range(blobs, start_date, end_date)
+    blobs   = _select_date_range(blobs, start_date, end_date)
     pending = sorted(
         blobs if overwrite else
         [b for b in blobs if _parse_date_from_filename(os.path.basename(b.name)) not in processed],
@@ -181,16 +173,16 @@ def retrieve_sumo_traffic(start_date: str | None = None, end_date: str | None = 
     )
 
     if not pending:
-        logger.info("Không có file SUMO mới.")
+        logger.info("No new SUMO files.")
         return
 
-    logger.info(f"Tìm thấy {len(pending)} file cần xử lý.")
+    logger.info(f"Found {len(pending)} files to process.")
     way_names, edge_to_way = _build_edge_name_map(OSM_FILE)
 
     for blob in pending:
         filename = os.path.basename(blob.name)
         date_str = _parse_date_from_filename(filename)
-        logger.info(f"Tải + xử lý: {blob.name}")
+        logger.info(f"Downloading + processing: {blob.name}")
 
         with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
             tmp_path = tmp.name
@@ -207,23 +199,12 @@ def retrieve_sumo_traffic(start_date: str | None = None, end_date: str | None = 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Retrieve SUMO traffic data và đẩy lên GCS.")
-    parser.add_argument(
-        "--start-date",
-        default=None,
-        metavar="YYYY-MM-DD",
-        help="Chỉ xử lý các file từ ngày này trở đi (bỏ qua các file trước đó).",
-    )
-    parser.add_argument(
-        "--end-date",
-        default=None,
-        metavar="YYYY-MM-DD",
-        help="Chỉ xử lý các file đến ngày này (bao gồm). Bỏ qua các file sau đó.",
-    )
-    parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Ghi đè file đã xử lý trước đó (bỏ qua checkpoint).",
-    )
+    parser = argparse.ArgumentParser(description="Parse SUMO output XML and upload to GCS.")
+    parser.add_argument("--start-date", default=None, metavar="YYYY-MM-DD",
+                        help="Only process files on or after this date.")
+    parser.add_argument("--end-date",   default=None, metavar="YYYY-MM-DD",
+                        help="Only process files on or before this date.")
+    parser.add_argument("--overwrite",  action="store_true",
+                        help="Reprocess files already in checkpoint.")
     args = parser.parse_args()
     retrieve_sumo_traffic(start_date=args.start_date, end_date=args.end_date, overwrite=args.overwrite)
