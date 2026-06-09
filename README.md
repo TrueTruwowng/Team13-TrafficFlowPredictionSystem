@@ -1,4 +1,4 @@
-# Real-Time Traffic Monitoring Pipeline
+<img width="841" height="678" alt="image" src="https://github.com/user-attachments/assets/26468d78-29d9-464a-b417-e8ceb8968f55" /># Real-Time Traffic Monitoring Pipeline
 
 A near real-time traffic monitoring system for urban road networks in Hanoi, Vietnam.
 
@@ -149,8 +149,8 @@ bash stop.sh        # stop infrastructure
 | View | Screenshot |
 |---|---|
 | Main dashboard | ![Main dashboard](docs/dashboard.png) |
-| Congestion Forecast Map | ![Congestion Forecast Map](docs/visualization_map.png) |
-| Realtime Map | ![Realtime Map](docs/realtime.png) |
+| Realtime Map | ![Congestion Forecast Map](docs/visualization_map.png) |
+| Congestion Forecast Map | ![Realtime Map](docs/realtime.png) |
 | Grafana metrics | ![Grafana metrics](docs/grafana.png) |
 
 ---
