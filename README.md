@@ -146,13 +146,12 @@ bash stop.sh        # stop infrastructure
 
 ## Demo
 
-
 | View | Screenshot |
 |---|---|
-| Main dashboard | `docs/screenshots/main_dashboard.png` |
-| Congestion Forecast Map | `docs/screenshots/visualization_map.png` |
-| Realtime Map | `docs/screenshots/realtime.png` |
-| Grafana metrics | `docs/screenshots/grafana.png` |
+| Main dashboard | ![Main dashboard](docs/screenshots/main_dashboard.png) |
+| Congestion Forecast Map | ![Congestion Forecast Map](docs/screenshots/visualization_map.png) |
+| Realtime Map | ![Realtime Map](docs/screenshots/realtime.png) |
+| Grafana metrics | ![Grafana metrics](docs/screenshots/grafana.png) |
 
 ---
 
