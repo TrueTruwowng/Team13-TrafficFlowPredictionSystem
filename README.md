@@ -148,10 +148,10 @@ bash stop.sh        # stop infrastructure
 
 | View | Screenshot |
 |---|---|
-| Main dashboard | ![Main dashboard](docs/screenshots/main_dashboard.png) |
-| Congestion Forecast Map | ![Congestion Forecast Map](docs/screenshots/visualization_map.png) |
-| Realtime Map | ![Realtime Map](docs/screenshots/realtime.png) |
-| Grafana metrics | ![Grafana metrics](docs/screenshots/grafana.png) |
+| Main dashboard | ![Main dashboard](docs/main_dashboard.png) |
+| Congestion Forecast Map | ![Congestion Forecast Map](docs/visualization_map.png) |
+| Realtime Map | ![Realtime Map](docs/realtime.png) |
+| Grafana metrics | ![Grafana metrics](docs/grafana.png) |
 
 ---
 
