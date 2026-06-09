@@ -1,4 +1,4 @@
-<img width="841" height="678" alt="image" src="https://github.com/user-attachments/assets/26468d78-29d9-464a-b417-e8ceb8968f55" /># Real-Time Traffic Monitoring Pipeline
+# Real-Time Traffic Monitoring Pipeline
 
 A near real-time traffic monitoring system for urban road networks in Hanoi, Vietnam.
 
