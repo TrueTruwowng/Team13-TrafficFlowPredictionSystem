@@ -96,6 +96,20 @@ def _fetch_and_send(broker: KafkaBroker, api: WeatherAPI, roads: list[dict],
     return new_cache
 
 
+def _refresh_cache(api: WeatherAPI, roads: list[dict]) -> dict:
+    """Live-fetch all roads into a new cache dict. Send nothing.
+    Roads that fail are omitted so the caller keeps their old cache entry."""
+    fresh = {}
+    for road in roads:
+        data = api.get_weather(road["lat"], road["lon"])
+        if data:
+            fresh[road["name"]] = data
+        else:
+            logger.warning(f"Could not fetch weather: {road['name']}")
+    logger.info(f"Weather cache refreshed: {len(fresh)}/{len(roads)} roads")
+    return fresh
+
+
 def _min_to_hhmm(total_min: int) -> str:
     return f"{total_min // 60:02d}:{total_min % 60:02d}"
 
@@ -143,16 +157,19 @@ def run(target_date: str = None):
         end_hhmm   = _min_to_hhmm(end_min)
         hhmm       = f"{(end_min // 60):02d}{(end_min % 60):02d}"
 
-        is_fetch_interval = (end_min % FETCH_INTERVAL_MINUTES == 0)
-        use_cache         = bool(_cached_weather) and not is_fetch_interval
-
         result = _fetch_and_send(
             broker, api, roads, target_date, begin_hhmm, end_hhmm, hhmm,
-            weather_cache=_cached_weather if use_cache else None,
+            weather_cache=_cached_weather if _cached_weather else None,
         )
         if result:
-            _cached_weather = result
+            _cached_weather = {**_cached_weather, **result}
             _last_fetch_min = end_min
+
+        if (end_min + WRITE_INTERVAL_MINUTES) % FETCH_INTERVAL_MINUTES == 0:
+            fresh = _refresh_cache(api, roads)
+            if fresh:
+                _cached_weather = {**_cached_weather, **fresh}
+                _last_fetch_min = end_min
 
     broker.close()
     logger.info(f"Weather retrieve {target_date} complete.")

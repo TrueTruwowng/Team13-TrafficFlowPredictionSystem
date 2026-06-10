@@ -174,6 +174,9 @@ class KafkaBroker:
             consumer.assign(tps)
             consumer.seek_to_end(*tps)
 
+            for tp in tps:
+                consumer.position(tp)
+
             if ready_event:
                 ready_event.set()
 
