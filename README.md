@@ -421,8 +421,8 @@ gs://<bucket>/simulation/traffic/2026-05-27/*.json
 | View | Screenshot |
 |---|---|
 | Main dashboard | ![Main dashboard](docs/dashboard.png) |
-| Realtime map | ![Realtime map](docs/realtime.png) |
-| Congestion forecast map | ![Congestion forecast map](docs/visualization_map.png) |
+| Realtime map | ![Realtime map](docs/visualization_map.png) |
+| Congestion forecast map | ![Congestion forecast map](docs/realtime.png) |
 | Grafana metrics | ![Grafana metrics](docs/grafana.png) |
 
 ---
