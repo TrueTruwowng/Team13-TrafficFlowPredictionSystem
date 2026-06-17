@@ -17,10 +17,13 @@ from config import GCS_BUCKET, GCS_PATHS
 
 load_dotenv()
 
+PROJECT_DIR     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_OSM_FILE = os.path.join(PROJECT_DIR, "dashboard", "backend", "app", "utils", "maps", "nghia_do_cut.osm.xml")
+
 BUCKET_NAME     = os.getenv("GCS_BUCKET_NAME")
 GCS_PREFIX      = GCS_PATHS["simulation_traffic"].removeprefix(f"gs://{GCS_BUCKET}/")
 CHECKPOINT_BLOB = f"{GCS_PREFIX}/_checkpoint.json"
-OSM_FILE        = "/home/dis/sumo_project/nghia_do_cut.osm.xml"
+OSM_FILE        = os.getenv("SUMO_OSM_FILE", DEFAULT_OSM_FILE)
 SOURCE_BUCKET   = GCS_BUCKET
 SOURCE_PREFIX   = "output_sumo"
 
